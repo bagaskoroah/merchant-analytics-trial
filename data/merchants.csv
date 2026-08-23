@@ -1,0 +1,409 @@
+merchant_id,nama,kategori,sub_kategori,tipe,kota,kecamatan,is_nasabah_bni,produk_bni,tgl_registrasi,status,avg_omzet_bulanan
+M0001,Kafe Berkah,F&B,cafe,retailer,Jakarta,Kemang,Tidak,,,,102671254.0
+M0002,Toko Grosir Jaya,F&B,restaurant,supplier,Jakarta,Pluit,Ya,EDC,2024-08-31,aktif,263453794.0
+M0003,Kafe Pak Haji,F&B,warung,retailer,Depok,Cimanggis,Ya,QRIS,2020-10-15,aktif,117614123.0
+M0004,Resto Abadi,F&B,catering,retailer,Bogor,Dramaga,Ya,"EDC, QRIS",2025-10-08,aktif,258582893.0
+M0005,Warung Abadi,F&B,warung,retailer,Bekasi,Summarecon,Ya,"EDC, QRIS, Giro",2025-12-08,aktif,53183670.0
+M0006,Dapur Karya,F&B,restaurant,retailer,Jakarta,,Tidak,,,,53184456.0
+M0007,Warung Anugrah,F&B,cafe,retailer,Tangerang,Gading Serpong,Ya,EDC,2021-12-29,aktif,271994263.0
+M0008,Kafe Bu Tini,F&B,catering,retailer,Bekasi,Jababeka,Ya,"EDC, QRIS, Giro",2025-03-31,aktif,130997822.0
+M0009,Dapur Pratama,F&B,catering,retailer,Bogor,Cibinong,Ya,EDC,2025-05-12,aktif,43032794.0
+M0010,Kafe Gemilang,F&B,cafe,retailer,Tangerang,Cipondoh,Ya,"QRIS, Giro",2025-01-16,aktif,106996217.0
+M0011,Bakery Berkah,F&B,cafe,retailer,Bekasi,Grand Galaxy,Ya,QRIS,2019-07-12,aktif,43268008.0
+M0012,Kedai Sentosa,F&B,catering,retailer,Depok,Cimanggis,Ya,Giro,2024-12-07,tidak aktif,43178067.0
+M0013,RM Persada,F&B,bakery,retailer,Depok,Margonda,Ya,Giro,2020-10-09,aktif,81634787.0
+M0014,Kedai Mandiri,F&B,bakery,retailer,Bekasi,Jababeka,Tidak,,,,11734546.0
+M0015,UD Supplier Anugrah,F&B,cafe,supplier,Bekasi,Jababeka,Ya,"QRIS, Giro",2019-01-03,aktif,74036275.0
+M0016,Dapur Lestari,F&B,cafe,retailer,Jakarta,Cempaka Putih,Ya,"QRIS, Giro",2019-11-19,aktif,
+M0017,Kafe Mas Bro,F&B,warung,retailer,Bekasi,Jababeka,Ya,"QRIS, Giro",2025-10-20,tidak aktif,26388846.0
+M0018,PT Distributor Citra,F&B,bakery,supplier,Depok,Cinere,Ya,"QRIS, Giro",2024-01-24,aktif,378375582.0
+M0019,Kedai Berkah,F&B,warung,retailer,Bandung,Dago,Ya,QRIS,2019-08-30,aktif,28999186.0
+M0020,Kedai Mulia,F&B,bakery,retailer,Bandung,Dago,Tidak,,,,18419614.0
+M0021,RM Mas Bro,F&B,cafe,retailer,Bekasi,Jababeka,Tidak,,,,245567862.0
+M0022,Resto Sumber,F&B,bakery,retailer,Bogor,Cibinong,Ya,Giro,2019-08-10,tidak aktif,53586157.0
+M0023,RM Buana,F&B,restaurant,retailer,Jakarta,Thamrin,Ya,EDC,2025-01-05,aktif,69774235.0
+M0024,Kafe Sentosa,F&B,catering,retailer,Bandung,Setiabudhi,Tidak,,,,18214465.0
+M0025,CV Bahan Abadi,F&B,cafe,supplier,Jakarta,Menteng,Ya,Giro,2024-05-25,aktif,190372611.0
+M0026,Resto Harmoni,F&B,bakery,retailer,Bogor,Tanah Sareal,Tidak,,,,72553177.0
+M0027,RM Mbak Sri,F&B,cafe,retailer,Bandung,Setiabudhi,Ya,EDC,2019-08-28,aktif,23303305.0
+M0028,Resto Barokah,F&B,warung,retailer,Depok,,Ya,"QRIS, Giro",2020-10-06,tidak aktif,92076307.0
+M0029,Kedai Sentosa,F&B,cafe,retailer,Bogor,Cibinong,Ya,"QRIS, Giro",2021-10-05,aktif,38241244.0
+M0030,PT Distributor Gemilang,F&B,cafe,supplier,Jakarta,Thamrin,Tidak,,,,233022366.0
+M0031,Warung Utama,F&B,bakery,retailer,Bogor,Dramaga,Ya,QRIS,2019-02-08,aktif,38204506.0
+M0032,UD Supplier Kang Asep,F&B,bakery,supplier,Jakarta,Sudirman,Ya,"EDC, QRIS",2019-10-09,aktif,1295059591.0
+M0033,RM Lestari,F&B,warung,retailer,Tangerang,Karawaci,Tidak,,,,64867189.0
+M0034,PT Distributor Mandiri,F&B,cafe,supplier,Jakarta,Senayan,Ya,QRIS,2025-03-16,aktif,126257149.0
+M0035,UD Supplier Gemilang,F&B,warung,supplier,Bogor,Dramaga,Ya,QRIS,2020-01-14,aktif,568229491.0
+M0036,Bakery Utama,F&B,bakery,retailer,Jakarta,Menteng,Ya,Giro,2025-03-09,aktif,21883439.0
+M0037,Kedai Jaya,F&B,bakery,retailer,Jakarta,Kelapa Gading,Ya,EDC,2023-10-27,aktif,79238847.0
+M0038,Kafe Mulia,F&B,restaurant,retailer,Jakarta,Cempaka Putih,Ya,"QRIS, Giro",2023-07-23,aktif,11254705.0
+M0039,Warung Makmur,F&B,cafe,retailer,Bogor,Sentul,Tidak,,,,19868230.0
+M0040,Bakery Nusantara,F&B,restaurant,retailer,Tangerang,Alam Sutera,Ya,QRIS,2024-04-11,aktif,78387506.0
+M0041,Dapur Berkah,F&B,cafe,retailer,Bandung,Cihampelas,Ya,EDC,2023-06-21,aktif,127626670.0
+M0042,RM Kang Asep,F&B,catering,retailer,Bandung,Cihampelas,Tidak,,,,
+M0043,CV Bahan Gemilang,F&B,cafe,supplier,Bandung,Dago,Ya,"EDC, QRIS",2019-06-06,aktif,268263797.0
+M0044,Warung Kang Asep,F&B,restaurant,retailer,Depok,Sawangan,Ya,"QRIS, Giro",2021-02-17,aktif,50073709.0
+M0045,Dapur Maju,F&B,bakery,retailer,Jakarta,Senayan,Ya,"EDC, QRIS, Giro",2022-09-14,aktif,17353941.0
+M0046,Kedai Lestari,F&B,catering,retailer,Depok,Sawangan,Ya,"EDC, QRIS, Giro",2022-04-26,aktif,34350949.0
+M0047,RM Indonesia,F&B,warung,retailer,Depok,Cimanggis,Ya,Giro,2025-02-22,aktif,43376358.0
+M0048,Kedai Pratama,F&B,catering,retailer,Tangerang,Karawaci,Ya,"EDC, QRIS, Giro",2021-05-25,aktif,170017172.0
+M0049,Bakery Kang Asep,F&B,warung,retailer,Depok,Margonda,Ya,EDC,2022-06-25,aktif,89455912.0
+M0050,Kafe Mas Bro,F&B,warung,retailer,Jakarta,Menteng,Tidak,,,,13433523.0
+M0051,RM Maju,F&B,catering,retailer,Tangerang,Cipondoh,Ya,EDC,2020-08-27,aktif,87896941.0
+M0052,Kafe Bang Jali,F&B,catering,retailer,Tangerang,Alam Sutera,Ya,EDC,2020-05-12,aktif,
+M0053,Dapur Pak Haji,F&B,warung,retailer,Depok,Sawangan,Tidak,,,,35703889.0
+M0054,Toko Grosir Nusantara,F&B,catering,supplier,Tangerang,Karawaci,Ya,EDC,2022-02-09,aktif,480021297.0
+M0055,Resto Karya,F&B,cafe,retailer,Bandung,Setiabudhi,Ya,"EDC, QRIS",2025-01-21,aktif,166066616.0
+M0056,RM Sukses,F&B,restaurant,retailer,Tangerang,Alam Sutera,Ya,"EDC, QRIS",2025-01-31,aktif,151811792.0
+M0057,,F&B,warung,retailer,Tangerang,Cipondoh,Ya,QRIS,2022-12-11,aktif,30851756.0
+M0058,Dapur Berkah,F&B,catering,retailer,Bekasi,Kemang Pratama,Ya,Giro,2024-06-12,aktif,49709611.0
+M0059,Dapur Bu Tini,F&B,cafe,retailer,Depok,Cinere,Tidak,,,,88466728.0
+M0060,CV Bahan Abadi,F&B,catering,supplier,Jakarta,Thamrin,Ya,Giro,2021-01-14,aktif,642216544.0
+M0061,Bakery Buana,F&B,catering,retailer,Bogor,Tanah Sareal,Ya,Giro,2021-10-30,aktif,42658759.0
+M0062,UD Supplier Sentosa,F&B,restaurant,supplier,Jakarta,Cempaka Putih,Tidak,,,,253651749.0
+M0063,Kedai Prima,F&B,cafe,retailer,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2020-04-13,tidak aktif,24259006.0
+M0064,Dapur Anugrah,F&B,cafe,retailer,Depok,Sawangan,Tidak,,,,22374087.0
+M0065,Resto Makmur,F&B,bakery,retailer,Bogor,Dramaga,Ya,Giro,2023-06-13,aktif,136423317.0
+M0066,Dapur Bersama,F&B,warung,retailer,Jakarta,Kemang,Tidak,,,,222539690.0
+M0067,RM Anugrah,F&B,restaurant,retailer,Bekasi,Grand Galaxy,Ya,"EDC, QRIS",2019-02-21,aktif,61539566.0
+M0068,RM Bu Tini,F&B,cafe,retailer,Tangerang,Gading Serpong,Ya,"EDC, QRIS, Giro",2024-11-07,aktif,162011780.0
+M0069,Toko Grosir Persada,F&B,bakery,supplier,Tangerang,Cipondoh,Tidak,,,,392995539.0
+M0070,Kafe Bu Tini,F&B,warung,retailer,Bandung,Setiabudhi,Tidak,,,,36740572.0
+M0071,Warung Pratama,F&B,cafe,retailer,Bandung,Dago,Ya,"EDC, QRIS",2021-11-24,aktif,
+M0072,CV Bahan Bang Jali,F&B,cafe,supplier,Depok,Sawangan,Ya,"EDC, QRIS, Giro",2023-07-23,aktif,1007189134.0
+M0073,RM Mbak Sri,F&B,catering,retailer,Depok,Cimanggis,Tidak,,,,63576633.0
+M0074,Warung Mulia,F&B,bakery,retailer,Bandung,Braga,Tidak,,,,268451088.0
+M0075,Kedai Surya,F&B,catering,retailer,Tangerang,Karawaci,Tidak,,,,6213465.0
+M0076,Toko Grosir Persada,F&B,bakery,supplier,Bandung,Cihampelas,Ya,QRIS,2021-02-27,aktif,567937538.0
+M0077,UD Supplier Sukses,F&B,catering,supplier,Depok,Cinere,Ya,"QRIS, Giro",2024-11-18,aktif,315490034.0
+M0078,Kafe Anugrah,F&B,cafe,retailer,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2024-12-27,aktif,50168273.0
+M0079,RM Utama,F&B,catering,retailer,Bekasi,Harapan Indah,Ya,QRIS,2025-06-09,aktif,71312679.0
+M0080,Resto Gemilang,F&B,catering,retailer,Bandung,Braga,Ya,QRIS,2023-06-30,aktif,10975630.0
+M0081,Dapur Lestari,F&B,restaurant,retailer,Bogor,Sentul,Tidak,,,,53881368.0
+M0082,Kedai Berkah,F&B,warung,retailer,Bekasi,Grand Galaxy,Ya,Giro,2022-05-02,tidak aktif,90548965.0
+M0083,Resto Mandiri,F&B,cafe,retailer,Bekasi,Kemang Pratama,Tidak,,,,248289171.0
+M0084,Kafe Mulia,F&B,cafe,retailer,Depok,Margonda,Ya,EDC,2019-01-11,aktif,41183852.0
+M0085,CV Bahan Berkah,F&B,bakery,supplier,Tangerang,Gading Serpong,Tidak,,,,154114303.0
+M0086,Bakery Maju,F&B,catering,retailer,Jakarta,Tebet,Ya,EDC,2020-09-02,aktif,41800491.0
+M0087,Dapur Lestari,F&B,warung,retailer,Jakarta,Kelapa Gading,Tidak,,,,149657799.0
+M0088,,F&B,bakery,supplier,Bandung,Setiabudhi,Tidak,,,,382791452.0
+M0089,Warung Pak Haji,F&B,restaurant,retailer,Bekasi,Kemang Pratama,Ya,Giro,2022-08-13,aktif,40760165.0
+M0090,Kedai Makmur,F&B,bakery,retailer,Bogor,Bogor Tengah,Ya,EDC,2024-04-11,aktif,104212296.0
+M0091,Warung Mbak Sri,F&B,restaurant,retailer,Bogor,Bogor Tengah,Ya,Giro,2022-09-27,aktif,71654734.0
+M0092,RM Mbak Sri,F&B,bakery,retailer,Bandung,Setiabudhi,Tidak,,,,157003788.0
+M0093,Warung Abadi,F&B,bakery,retailer,Bekasi,,Ya,QRIS,2023-07-14,aktif,34905403.0
+M0094,Warung Barokah,F&B,cafe,retailer,Depok,Cimanggis,Ya,"QRIS, Giro",2024-08-03,aktif,
+M0095,Kedai Utama,F&B,bakery,retailer,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2024-06-08,aktif,46135933.0
+M0096,PT Distributor Sejahtera,F&B,warung,supplier,Bogor,Sentul,Ya,EDC,2020-04-09,tidak aktif,91256797.0
+M0097,Kedai Persada,F&B,catering,retailer,Tangerang,Gading Serpong,Tidak,,,,85712415.0
+M0098,Kedai Prima,F&B,catering,retailer,Bogor,Tanah Sareal,Ya,"QRIS, Giro",2024-09-12,aktif,83049696.0
+M0099,Dapur Kang Asep,F&B,bakery,retailer,Tangerang,Gading Serpong,Tidak,,,,65962839.0
+M0100,Dapur Mbak Sri,F&B,cafe,retailer,Depok,Sawangan,Ya,Giro,2022-11-14,aktif,53162912.0
+M0101,PT Distributor Maju,F&B,cafe,supplier,Tangerang,Cipondoh,Ya,EDC,2023-08-10,aktif,94840150.0
+M0102,Warung Prima,F&B,catering,retailer,Depok,Cimanggis,Tidak,,,,44966090.0
+M0103,Bakery Mandiri,F&B,catering,retailer,Bekasi,Kemang Pratama,Ya,Giro,2019-03-04,aktif,48233141.0
+M0104,Dapur Gemilang,F&B,bakery,retailer,Jakarta,Kuningan,Tidak,,,,31894701.0
+M0105,Dapur Buana,F&B,warung,retailer,Depok,Margonda,Ya,"EDC, QRIS",2024-06-21,aktif,56788412.0
+M0106,Kafe Abadi,F&B,catering,retailer,Bogor,Dramaga,Tidak,,,,94456103.0
+M0107,RM Lestari,F&B,restaurant,retailer,Tangerang,Alam Sutera,Ya,QRIS,2022-04-16,aktif,358545924.0
+M0108,Warung Indonesia,F&B,cafe,retailer,Bogor,Bogor Tengah,Ya,"QRIS, Giro",2023-04-16,aktif,76831097.0
+M0109,Kafe Bu Tini,F&B,bakery,retailer,Bekasi,Jababeka,Ya,"EDC, QRIS, Giro",2019-02-08,aktif,82788138.0
+M0110,Toko Grosir Surya,F&B,warung,supplier,Bogor,Cibinong,Ya,Giro,2021-10-21,aktif,277253627.0
+M0111,Resto Mulia,F&B,catering,retailer,Tangerang,Cipondoh,Ya,"QRIS, Giro",2022-04-26,aktif,11676699.0
+M0112,Kedai Barokah,F&B,warung,retailer,Bandung,Dago,Tidak,,,,64111705.0
+M0113,Dapur Surya,F&B,cafe,retailer,Bogor,Bogor Tengah,Tidak,,,,69317446.0
+M0114,CV Bahan Jaya,F&B,bakery,supplier,Bandung,Braga,Tidak,,,,2111350632.0
+M0115,RM Utama,F&B,restaurant,retailer,Bekasi,Harapan Indah,Tidak,,,,55222173.0
+M0116,Kafe Maju,F&B,cafe,retailer,Depok,Cimanggis,Tidak,,,,86132090.0
+M0117,Bakery Nusantara,F&B,bakery,retailer,Bekasi,Kemang Pratama,Tidak,,,,63640422.0
+M0118,Dapur Bersama,F&B,catering,retailer,Bandung,Cihampelas,Tidak,,,,22935345.0
+M0119,Dapur Anugrah,F&B,restaurant,retailer,Bogor,Tanah Sareal,Tidak,,,,183649669.0
+M0120,Resto Bu Tini,F&B,bakery,retailer,Bandung,Buah Batu,Tidak,,,,129182892.0
+M0121,Fashion Mandiri,Fashion,accessories,retailer,Bekasi,,Ya,"QRIS, Giro",2025-04-18,aktif,133809640.0
+M0122,Outlet Lestari,Fashion,textile,retailer,Depok,Margonda,Ya,QRIS,2019-06-02,tidak aktif,28963625.0
+M0123,Butik Harmoni,Fashion,textile,retailer,Jakarta,,Ya,"EDC, QRIS, Giro",2025-01-21,aktif,232061940.0
+M0124,Outlet Purnama,Fashion,footwear,retailer,Tangerang,BSD,Ya,"EDC, QRIS",2021-06-08,aktif,18593712.0
+M0125,Fashion Surya,Fashion,clothing,retailer,Bandung,Dago,Ya,EDC,2020-05-15,aktif,111348043.0
+M0126,Toko Baju Buana,Fashion,accessories,retailer,Depok,Margonda,Tidak,,,,471490760.0
+M0127,UD Kain Sukses,Fashion,accessories,supplier,Bogor,Cibinong,Tidak,,,,
+M0128,Toko Baju Persada,Fashion,accessories,retailer,Bandung,Braga,Tidak,,,,39441615.0
+M0129,,Fashion,accessories,supplier,Bandung,Braga,Ya,EDC,2025-08-08,aktif,318687351.0
+M0130,Outlet Bang Jali,Fashion,clothing,retailer,Jakarta,Kelapa Gading,Tidak,,,,41735886.0
+M0131,UD Kain Mandiri,Fashion,textile,supplier,Tangerang,Gading Serpong,Ya,"QRIS, Giro",2019-06-27,aktif,85111205.0
+M0132,PT Tekstil Mas Bro,Fashion,textile,supplier,Depok,Margonda,Ya,QRIS,2024-07-01,aktif,310859120.0
+M0133,Butik Sentosa,Fashion,accessories,retailer,Bandung,Buah Batu,Ya,"EDC, QRIS, Giro",2025-07-25,aktif,25239648.0
+M0134,Fashion Bu Tini,Fashion,textile,retailer,Bekasi,Kemang Pratama,Ya,"EDC, QRIS, Giro",2020-04-13,aktif,100556788.0
+M0135,CV Konveksi Pak Haji,Fashion,accessories,supplier,Depok,,Ya,Giro,2023-06-22,aktif,141026815.0
+M0136,Fashion Anugrah,Fashion,accessories,retailer,Tangerang,Gading Serpong,Tidak,,,,264920665.0
+M0137,PT Tekstil Abadi,Fashion,textile,supplier,Jakarta,Sudirman,Ya,"EDC, QRIS, Giro",2023-03-07,aktif,157257848.0
+M0138,CV Konveksi Bersama,Fashion,textile,supplier,Bekasi,Kemang Pratama,Ya,"EDC, QRIS, Giro",2023-09-29,tidak aktif,227429483.0
+M0139,PT Tekstil Kang Asep,Fashion,accessories,supplier,Bandung,Cihampelas,Ya,Giro,2021-07-07,aktif,564140433.0
+M0140,CV Konveksi Berkah,Fashion,textile,supplier,Bandung,Dago,Tidak,,,,109924964.0
+M0141,PT Tekstil Persada,Fashion,clothing,supplier,Bekasi,Kemang Pratama,Ya,"EDC, QRIS, Giro",2022-06-19,aktif,352996234.0
+M0142,Outlet Sentosa,Fashion,accessories,retailer,Bogor,Bogor Tengah,Tidak,,,,212920300.0
+M0143,Butik Harmoni,Fashion,textile,retailer,Jakarta,Senayan,Ya,EDC,2023-02-24,aktif,15452248.0
+M0144,PT Tekstil Prima,Fashion,accessories,supplier,Bekasi,Summarecon,Tidak,,,,
+M0145,Fashion Pak Haji,Fashion,textile,retailer,Depok,Margonda,Ya,Giro,2023-08-24,aktif,82962106.0
+M0146,CV Konveksi Bersama,Fashion,footwear,supplier,Jakarta,Cempaka Putih,Tidak,,,,550016203.0
+M0147,UD Kain Lestari,Fashion,clothing,supplier,Tangerang,Karawaci,Ya,"QRIS, Giro",2019-08-13,aktif,109391027.0
+M0148,Fashion Pratama,Fashion,clothing,retailer,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2023-10-30,aktif,20006925.0
+M0149,UD Kain Surya,Fashion,clothing,supplier,Depok,Cinere,Ya,"EDC, QRIS, Giro",2019-06-23,aktif,446769452.0
+M0150,Outlet Citra,Fashion,textile,retailer,Bandung,Buah Batu,Ya,Giro,2019-03-27,aktif,85779122.0
+M0151,PT Tekstil Sumber,Fashion,clothing,supplier,Tangerang,Gading Serpong,Ya,"QRIS, Giro",2023-06-29,aktif,359560956.0
+M0152,Butik Buana,Fashion,accessories,retailer,Depok,Sawangan,Ya,"EDC, QRIS, Giro",2020-04-12,aktif,89684040.0
+M0153,Butik Mandiri,Fashion,accessories,retailer,Bandung,Braga,Ya,EDC,2025-10-03,aktif,35604327.0
+M0154,Outlet Pak Haji,Fashion,footwear,retailer,Bogor,Tanah Sareal,Tidak,,,,80924592.0
+M0155,Toko Baju Mas Bro,Fashion,textile,retailer,Bogor,Tanah Sareal,Tidak,,,,85477626.0
+M0156,Fashion Kang Asep,Fashion,clothing,retailer,Bekasi,Summarecon,Ya,Giro,2019-06-04,aktif,34521184.0
+M0157,Outlet Bu Tini,Fashion,clothing,retailer,Jakarta,Sudirman,Ya,"QRIS, Giro",2021-02-10,aktif,352019475.0
+M0158,,Fashion,footwear,supplier,Bogor,Cibinong,Tidak,,,,429901356.0
+M0159,,Fashion,textile,retailer,Bekasi,Jababeka,Tidak,,,,22473038.0
+M0160,PT Tekstil Anugrah,Fashion,footwear,supplier,Bekasi,Kemang Pratama,Tidak,,,,497568048.0
+M0161,Toko Baju Buana,Fashion,clothing,retailer,Tangerang,Gading Serpong,Ya,"QRIS, Giro",2023-05-03,aktif,27310628.0
+M0162,PT Tekstil Prima,Fashion,footwear,supplier,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2023-05-25,aktif,552336313.0
+M0163,Outlet Buana,Fashion,accessories,retailer,Bandung,Buah Batu,Tidak,,,,186275258.0
+M0164,UD Kain Anugrah,Fashion,clothing,supplier,Jakarta,Thamrin,Ya,EDC,2021-05-27,tidak aktif,152618842.0
+M0165,PT Tekstil Prima,Fashion,clothing,supplier,Bogor,Sentul,Ya,QRIS,2024-09-10,aktif,635994773.0
+M0166,UD Kain Utama,Fashion,textile,supplier,Jakarta,Cempaka Putih,Ya,EDC,2020-11-09,aktif,409408806.0
+M0167,Outlet Karya,Fashion,textile,retailer,Depok,Cinere,Ya,EDC,2022-06-21,aktif,137598990.0
+M0168,Outlet Bu Tini,Fashion,footwear,retailer,Bandung,Buah Batu,Tidak,,,,361985127.0
+M0169,PT Tekstil Maju,Fashion,accessories,supplier,Bekasi,Grand Galaxy,Tidak,,,,241816445.0
+M0170,Fashion Mandiri,Fashion,clothing,retailer,Depok,,Ya,EDC,2022-01-22,aktif,33318969.0
+M0171,Butik Pak Haji,Fashion,footwear,retailer,Tangerang,BSD,Tidak,,,,29486320.0
+M0172,Fashion Mulia,Fashion,textile,retailer,Jakarta,Thamrin,Tidak,,,,31508589.0
+M0173,Fashion Mandiri,Fashion,footwear,retailer,Bogor,Cibinong,Tidak,,,,61258211.0
+M0174,Outlet Utama,Fashion,textile,retailer,Jakarta,,Ya,QRIS,2019-11-21,aktif,89257568.0
+M0175,Outlet Bersama,Fashion,footwear,retailer,Bekasi,Kemang Pratama,Ya,QRIS,2019-07-15,aktif,84226631.0
+M0176,PT Tekstil Mbak Sri,Fashion,clothing,supplier,Tangerang,BSD,Tidak,,,,570341920.0
+M0177,CV Konveksi Sumber,Fashion,clothing,supplier,Bogor,Sentul,Tidak,,,,297344368.0
+M0178,Butik Abadi,Fashion,footwear,retailer,Bekasi,Grand Galaxy,Ya,"QRIS, Giro",2025-02-06,aktif,242904924.0
+M0179,CV Konveksi Mas Bro,Fashion,clothing,supplier,Bekasi,Summarecon,Tidak,,,,238117434.0
+M0180,Fashion Sentosa,Fashion,footwear,retailer,Bandung,Dago,Ya,"EDC, QRIS, Giro",2020-02-29,aktif,759485850.0
+M0181,Fashion Buana,Fashion,accessories,retailer,Bogor,Cibinong,Tidak,,,,115306068.0
+M0182,UD Kain Indonesia,Fashion,accessories,supplier,Depok,Cimanggis,Ya,Giro,2019-06-01,aktif,148229744.0
+M0183,Fashion Kang Asep,Fashion,textile,retailer,Jakarta,Cempaka Putih,Tidak,,,,25045300.0
+M0184,PT Tekstil Maju,Fashion,footwear,supplier,Tangerang,Gading Serpong,Ya,QRIS,2022-09-21,aktif,432882952.0
+M0185,Outlet Harmoni,Fashion,footwear,retailer,Tangerang,Cipondoh,Tidak,,,,53697848.0
+M0186,CV Konveksi Bang Jali,Fashion,footwear,supplier,Depok,Cimanggis,Tidak,,,,520968634.0
+M0187,Butik Karya,Fashion,footwear,retailer,Jakarta,Thamrin,Ya,"EDC, QRIS",2022-04-25,aktif,100524683.0
+M0188,Fashion Pak Haji,Fashion,clothing,retailer,Bogor,Tanah Sareal,Tidak,,,,61494234.0
+M0189,Fashion Barokah,Fashion,clothing,retailer,Bekasi,Grand Galaxy,Tidak,,,,30642106.0
+M0190,Butik Makmur,Fashion,accessories,retailer,Bandung,Buah Batu,Tidak,,,,16795767.0
+M0191,PT Tekstil Mulia,Fashion,footwear,supplier,Jakarta,Kelapa Gading,Ya,"QRIS, Giro",2019-05-13,aktif,205876707.0
+M0192,CV Konveksi Sentosa,Fashion,accessories,supplier,Bandung,,Ya,Giro,2022-07-11,aktif,583829201.0
+M0193,Outlet Bang Jali,Fashion,textile,retailer,Jakarta,Kelapa Gading,Tidak,,,,79612714.0
+M0194,Outlet Sukses,Fashion,footwear,retailer,Bandung,Cihampelas,Tidak,,,,21398579.0
+M0195,PT Tekstil Sentosa,Fashion,textile,supplier,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2023-12-29,aktif,337996041.0
+M0196,Toko Baju Karya,Fashion,footwear,retailer,Depok,Sawangan,Tidak,,,,92876911.0
+M0197,Butik Bersama,Fashion,accessories,retailer,Bandung,Buah Batu,Tidak,,,,29636827.0
+M0198,Fashion Anugrah,Fashion,textile,retailer,Tangerang,BSD,Tidak,,,,75402621.0
+M0199,PT Tekstil Sentosa,Fashion,footwear,supplier,Bogor,Bogor Tengah,Ya,"EDC, QRIS, Giro",2024-05-14,aktif,308294784.0
+M0200,Butik Pratama,Fashion,clothing,retailer,Bekasi,Summarecon,Ya,"EDC, QRIS, Giro",2024-10-20,aktif,23472186.0
+M0201,PT Distribusi Sumber,Grocery,minimarket,supplier,Depok,Cinere,Tidak,,,,391787393.0
+M0202,PT Distribusi Nusantara,Grocery,toko_kelontong,supplier,Bogor,Dramaga,Tidak,,,,460870486.0
+M0203,Mart Abadi,Grocery,toko_kelontong,retailer,Bandung,Buah Batu,Ya,"QRIS, Giro",2022-01-29,aktif,174031368.0
+M0204,UD Sembako Nusantara,Grocery,supermarket,supplier,Bekasi,Summarecon,Ya,"QRIS, Giro",2025-10-14,aktif,683708107.0
+M0205,PT Distribusi Jaya,Grocery,toko_kelontong,supplier,Jakarta,Menteng,Tidak,,,,97744208.0
+M0206,UD Sembako Makmur,Grocery,distributor,supplier,Tangerang,,Tidak,,,,138966015.0
+M0207,CV Grosir Mulia,Grocery,distributor,supplier,Bandung,Cihampelas,Ya,QRIS,2019-09-03,aktif,444307840.0
+M0208,CV Grosir Prima,Grocery,toko_kelontong,supplier,Tangerang,,Tidak,,,,443863997.0
+M0209,Minimarket Utama,Grocery,toko_kelontong,retailer,Depok,Sawangan,Ya,QRIS,2022-07-31,aktif,104379402.0
+M0210,Swalayan Mandiri,Grocery,minimarket,retailer,Tangerang,Alam Sutera,Ya,Giro,2025-11-25,aktif,2104741179.0
+M0211,Mart Maju,Grocery,supermarket,retailer,Bandung,Buah Batu,Ya,"QRIS, Giro",2024-03-27,aktif,109759422.0
+M0212,CV Grosir Kang Asep,Grocery,distributor,supplier,Jakarta,Sudirman,Tidak,,,,729925120.0
+M0213,Toko Barokah,Grocery,toko_kelontong,retailer,Bekasi,Harapan Indah,Ya,"EDC, QRIS, Giro",2024-04-11,aktif,154948225.0
+M0214,Mart Anugrah,Grocery,distributor,retailer,Tangerang,Alam Sutera,Ya,Giro,2019-07-29,aktif,118006719.0
+M0215,Toko Harmoni,Grocery,distributor,retailer,Bekasi,Harapan Indah,Tidak,,,,49439372.0
+M0216,Toko Utama,Grocery,minimarket,retailer,Bekasi,Kemang Pratama,Ya,"EDC, QRIS",2025-04-03,aktif,130003547.0
+M0217,Minimarket Kang Asep,Grocery,minimarket,retailer,Bekasi,,Ya,EDC,2022-09-26,aktif,32751434.0
+M0218,Swalayan Pratama,Grocery,toko_kelontong,retailer,Bekasi,Kemang Pratama,Ya,"QRIS, Giro",2022-05-10,aktif,53056251.0
+M0219,UD Sembako Lestari,Grocery,distributor,supplier,Bekasi,Grand Galaxy,Tidak,,,,199576696.0
+M0220,Minimarket Lestari,Grocery,minimarket,retailer,Bandung,Dago,Ya,"EDC, QRIS",2025-06-27,aktif,70680955.0
+M0221,Swalayan Bang Jali,Grocery,distributor,retailer,Bekasi,Grand Galaxy,Ya,"EDC, QRIS, Giro",2021-09-19,aktif,527253866.0
+M0222,Minimarket Pratama,Grocery,distributor,retailer,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2021-04-15,aktif,12230719.0
+M0223,UD Sembako Utama,Grocery,supermarket,supplier,Tangerang,BSD,Ya,"EDC, QRIS, Giro",2024-05-13,aktif,509534515.0
+M0224,Mart Surya,Grocery,toko_kelontong,retailer,Tangerang,Karawaci,Tidak,,,,15379649.0
+M0225,Mart Berkah,Grocery,toko_kelontong,retailer,Bogor,Dramaga,Tidak,,,,42937722.0
+M0226,Mart Mas Bro,Grocery,toko_kelontong,retailer,Depok,Cimanggis,Ya,"EDC, QRIS, Giro",2022-01-25,aktif,174957831.0
+M0227,CV Grosir Prima,Grocery,toko_kelontong,supplier,Tangerang,Cipondoh,Ya,"EDC, QRIS, Giro",2019-11-20,aktif,309795826.0
+M0228,Swalayan Maju,Grocery,toko_kelontong,retailer,Depok,Cimanggis,Tidak,,,,24891319.0
+M0229,Swalayan Mulia,Grocery,minimarket,retailer,Bogor,Cibinong,Tidak,,,,34491609.0
+M0230,PT Distribusi Mandiri,Grocery,distributor,supplier,Bogor,,Ya,Giro,2020-02-16,aktif,506825945.0
+M0231,UD Sembako Mas Bro,Grocery,distributor,supplier,Bogor,Tanah Sareal,Tidak,,,,164054081.0
+M0232,Toko Abadi,Grocery,supermarket,retailer,Bandung,Cihampelas,Ya,"EDC, QRIS, Giro",2019-06-02,aktif,79782339.0
+M0233,Minimarket Indonesia,Grocery,toko_kelontong,retailer,Jakarta,Thamrin,Tidak,,,,68408979.0
+M0234,Toko Buana,Grocery,toko_kelontong,retailer,Bandung,Buah Batu,Ya,"EDC, QRIS, Giro",2025-02-03,aktif,36526905.0
+M0235,Mart Maju,Grocery,minimarket,retailer,Bekasi,Grand Galaxy,Ya,"EDC, QRIS, Giro",2024-02-23,aktif,452161366.0
+M0236,Mart Maju,Grocery,supermarket,retailer,Jakarta,Cempaka Putih,Tidak,,,,
+M0237,Mart Abadi,Grocery,distributor,retailer,Tangerang,Karawaci,Tidak,,,,10610680.0
+M0238,Mart Mulia,Grocery,minimarket,retailer,Bogor,Tanah Sareal,Ya,EDC,2024-01-04,tidak aktif,77656738.0
+M0239,Toko Gemilang,Grocery,toko_kelontong,retailer,Bekasi,Kemang Pratama,Tidak,,,,36193575.0
+M0240,Minimarket Lestari,Grocery,supermarket,retailer,Depok,Margonda,Ya,"QRIS, Giro",2022-06-27,aktif,141412258.0
+M0241,Swalayan Berkah,Grocery,supermarket,retailer,Bandung,Buah Batu,Ya,Giro,2025-10-17,aktif,32175998.0
+M0242,,Grocery,supermarket,supplier,Tangerang,Karawaci,Tidak,,,,268459560.0
+M0243,CV Grosir Bang Jali,Grocery,toko_kelontong,supplier,Jakarta,Senayan,Ya,"QRIS, Giro",2020-04-04,aktif,440750636.0
+M0244,UD Sembako Prima,Grocery,supermarket,supplier,Bogor,Bogor Tengah,Ya,"QRIS, Giro",2023-12-15,aktif,588215629.0
+M0245,UD Sembako Pak Haji,Grocery,minimarket,supplier,Tangerang,BSD,Ya,"QRIS, Giro",2023-08-29,aktif,112646243.0
+M0246,UD Sembako Makmur,Grocery,distributor,supplier,Tangerang,Gading Serpong,Ya,QRIS,2021-06-11,aktif,225177381.0
+M0247,Toko Sentosa,Grocery,distributor,retailer,Bandung,Dago,Ya,Giro,2021-01-07,aktif,42821429.0
+M0248,Minimarket Harmoni,Grocery,distributor,retailer,Bandung,Setiabudhi,Ya,"EDC, QRIS, Giro",2025-01-17,aktif,36470114.0
+M0249,Minimarket Bang Jali,Grocery,supermarket,retailer,Jakarta,Kelapa Gading,Tidak,,,,321628855.0
+M0250,Mart Bu Tini,Grocery,distributor,retailer,Jakarta,Menteng,Ya,EDC,2021-10-10,aktif,94535269.0
+M0251,Toko Purnama,Grocery,minimarket,retailer,Bogor,Cibinong,Ya,QRIS,2020-02-18,aktif,21108881.0
+M0252,PT Distribusi Jaya,Grocery,distributor,supplier,Depok,Margonda,Ya,"QRIS, Giro",2021-06-08,aktif,613253873.0
+M0253,Mart Pratama,Grocery,supermarket,retailer,Bogor,Bogor Tengah,Ya,EDC,2024-11-05,aktif,
+M0254,Swalayan Sumber,Grocery,distributor,retailer,Jakarta,Senayan,Ya,"EDC, QRIS",2023-04-11,aktif,
+M0255,Mart Harmoni,Grocery,supermarket,retailer,Tangerang,Alam Sutera,Tidak,,,,16727540.0
+M0256,CV Grosir Prima,Grocery,distributor,supplier,Bogor,Sentul,Tidak,,,,199757111.0
+M0257,UD Sembako Bang Jali,Grocery,supermarket,supplier,Tangerang,Cipondoh,Ya,"EDC, QRIS",2021-04-12,aktif,810797524.0
+M0258,UD Sembako Maju,Grocery,minimarket,supplier,Bandung,Dago,Ya,"EDC, QRIS, Giro",2025-10-13,aktif,167060140.0
+M0259,Swalayan Mas Bro,Grocery,supermarket,retailer,Bogor,Bogor Tengah,Tidak,,,,97898079.0
+M0260,Swalayan Maju,Grocery,minimarket,retailer,Bandung,Dago,Tidak,,,,131849364.0
+M0261,UD Sembako Sukses,Grocery,distributor,supplier,Bogor,Bogor Tengah,Tidak,,,,140182488.0
+M0262,CV Grosir Bu Tini,Grocery,toko_kelontong,supplier,Bandung,Cihampelas,Ya,"EDC, QRIS",2024-10-01,aktif,280582880.0
+M0263,CV Grosir Pratama,Grocery,distributor,supplier,Bandung,Braga,Ya,EDC,2020-08-20,aktif,22009530.0
+M0264,CV Grosir Prima,Grocery,supermarket,supplier,Bekasi,Grand Galaxy,Ya,Giro,2025-05-22,aktif,129668258.0
+M0265,Minimarket Bu Tini,Grocery,supermarket,retailer,Bandung,Setiabudhi,Tidak,,,,52309505.0
+M0266,Minimarket Indonesia,Grocery,minimarket,retailer,Bogor,Sentul,Ya,QRIS,2019-07-18,aktif,21359243.0
+M0267,Toko Sukses,Grocery,distributor,retailer,Jakarta,Kelapa Gading,Ya,"QRIS, Giro",2025-11-30,aktif,285333769.0
+M0268,Minimarket Sejahtera,Grocery,minimarket,retailer,Jakarta,Senayan,Ya,"EDC, QRIS",2025-01-03,aktif,18126268.0
+M0269,Toko Bang Jali,Grocery,supermarket,retailer,Bogor,Cibinong,Ya,"QRIS, Giro",2024-11-26,aktif,44187829.0
+M0270,,Grocery,distributor,retailer,Tangerang,BSD,Ya,"EDC, QRIS, Giro",2021-07-14,aktif,73858859.0
+M0271,Toko Citra,Grocery,distributor,retailer,Depok,Margonda,Ya,Giro,2019-08-18,aktif,240239274.0
+M0272,Minimarket Buana,Grocery,minimarket,retailer,Jakarta,Kuningan,Tidak,,,,18033182.0
+M0273,Minimarket Persada,Grocery,minimarket,retailer,Bogor,Sentul,Tidak,,,,187042678.0
+M0274,Toko Indonesia,Grocery,toko_kelontong,retailer,Bekasi,Kemang Pratama,Ya,EDC,2025-08-01,aktif,66267474.0
+M0275,Swalayan Mulia,Grocery,distributor,retailer,Jakarta,,Tidak,,,,27143338.0
+M0276,UD Sembako Utama,Grocery,minimarket,supplier,Bandung,Setiabudhi,Ya,"EDC, QRIS",2019-08-08,aktif,425886220.0
+M0277,Minimarket Pratama,Grocery,minimarket,retailer,Bandung,Buah Batu,Tidak,,,,78542758.0
+M0278,CV Grosir Harmoni,Grocery,distributor,supplier,Tangerang,Alam Sutera,Ya,"QRIS, Giro",2023-04-06,aktif,182056292.0
+M0279,Toko Persada,Grocery,supermarket,retailer,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2020-09-23,aktif,69917174.0
+M0280,Mart Pak Haji,Grocery,toko_kelontong,retailer,Jakarta,Menteng,Tidak,,,,46418923.0
+M0281,Gadget Sumber,Electronics,service,retailer,Bogor,Cibinong,Ya,"QRIS, Giro",2023-07-30,aktif,72722807.0
+M0282,Komputer Harmoni,Electronics,gadget,retailer,Bekasi,Summarecon,Ya,Giro,2019-12-13,aktif,119152841.0
+M0283,Gadget Harmoni,Electronics,computer,retailer,Bekasi,Kemang Pratama,Ya,"EDC, QRIS",2022-01-04,aktif,
+M0284,Digital Lestari,Electronics,service,retailer,Tangerang,Gading Serpong,Tidak,,,,21551717.0
+M0285,Digital Maju,Electronics,service,retailer,Bandung,Braga,Ya,"EDC, QRIS",2019-01-28,aktif,447743032.0
+M0286,CV Tech Supply Buana,Electronics,service,supplier,Tangerang,Gading Serpong,Tidak,,,,61733035.0
+M0287,CV Tech Supply Maju,Electronics,service,supplier,Bogor,Dramaga,Ya,Giro,2022-07-31,aktif,260619467.0
+M0288,Komputer Harmoni,Electronics,accessories,retailer,Bekasi,Jababeka,Tidak,,,,111494462.0
+M0289,Gadget Indonesia,Electronics,gadget,retailer,Bandung,Dago,Tidak,,,,84553301.0
+M0290,Digital Karya,Electronics,gadget,retailer,Depok,,Tidak,,,,37489461.0
+M0291,Gadget Lestari,Electronics,computer,retailer,Depok,Cimanggis,Ya,EDC,2023-09-30,aktif,54444368.0
+M0292,,Electronics,service,supplier,Tangerang,Karawaci,Ya,"EDC, QRIS",2025-01-08,aktif,198361018.0
+M0293,Komputer Nusantara,Electronics,gadget,retailer,Jakarta,Tebet,Ya,"EDC, QRIS, Giro",2023-06-25,tidak aktif,38631235.0
+M0294,Toko IT Gemilang,Electronics,computer,retailer,Jakarta,Menteng,Ya,"QRIS, Giro",2025-04-04,aktif,141052382.0
+M0295,Digital Bu Tini,Electronics,computer,retailer,Tangerang,Gading Serpong,Ya,QRIS,2024-05-31,aktif,90541053.0
+M0296,Komputer Lestari,Electronics,accessories,retailer,Jakarta,Kelapa Gading,Ya,EDC,2024-11-04,aktif,35193830.0
+M0297,Komputer Sentosa,Electronics,accessories,retailer,Tangerang,Cipondoh,Ya,"EDC, QRIS, Giro",2020-04-16,aktif,147544426.0
+M0298,Gadget Bang Jali,Electronics,computer,retailer,Depok,Cinere,Ya,"EDC, QRIS",2025-04-12,tidak aktif,86579148.0
+M0299,Gadget Sumber,Electronics,service,retailer,Tangerang,Alam Sutera,Ya,"QRIS, Giro",2021-03-19,aktif,
+M0300,Gadget Persada,Electronics,gadget,retailer,Jakarta,Tebet,Ya,"QRIS, Giro",2021-02-04,aktif,115717907.0
+M0301,Digital Bang Jali,Electronics,accessories,retailer,Jakarta,Kemang,Ya,"QRIS, Giro",2023-05-27,aktif,31136910.0
+M0302,Gadget Lestari,Electronics,gadget,retailer,Tangerang,Karawaci,Tidak,,,,39659340.0
+M0303,Komputer Bersama,Electronics,computer,retailer,Jakarta,Tebet,Ya,EDC,2024-09-23,aktif,128644615.0
+M0304,Digital Indonesia,Electronics,service,retailer,Bekasi,Grand Galaxy,Tidak,,,,113729483.0
+M0305,Digital Karya,Electronics,computer,retailer,Bekasi,Jababeka,Ya,Giro,2025-12-12,aktif,64436355.0
+M0306,Gadget Harmoni,Electronics,service,retailer,Tangerang,Alam Sutera,Ya,Giro,2023-08-30,aktif,72972604.0
+M0307,Gadget Karya,Electronics,gadget,retailer,Bekasi,Summarecon,Ya,"QRIS, Giro",2022-03-28,aktif,207345782.0
+M0308,PT Elektronik Bersama,Electronics,accessories,supplier,Depok,Cimanggis,Tidak,,,,183319829.0
+M0309,Digital Sukses,Electronics,service,retailer,Bekasi,Summarecon,Ya,"EDC, QRIS, Giro",2021-10-10,aktif,107434040.0
+M0310,Komputer Abadi,Electronics,service,retailer,Tangerang,Gading Serpong,Tidak,,,,54735694.0
+M0311,Komputer Sumber,Electronics,computer,retailer,Bogor,Sentul,Tidak,,,,53977989.0
+M0312,Komputer Persada,Electronics,computer,retailer,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2022-04-13,aktif,176511955.0
+M0313,PT Elektronik Purnama,Electronics,gadget,supplier,Depok,Margonda,Tidak,,,,569536300.0
+M0314,Gadget Prima,Electronics,accessories,retailer,Depok,Cinere,Tidak,,,,136544164.0
+M0315,Komputer Purnama,Electronics,service,retailer,Tangerang,Alam Sutera,Ya,"EDC, QRIS, Giro",2020-01-17,aktif,212601680.0
+M0316,Digital Mbak Sri,Electronics,accessories,retailer,Depok,Sawangan,Ya,"EDC, QRIS, Giro",2020-01-17,aktif,66912975.0
+M0317,Digital Sukses,Electronics,service,retailer,Jakarta,Senayan,Tidak,,,,121297610.0
+M0318,Komputer Buana,Electronics,computer,retailer,Bandung,Cihampelas,Ya,Giro,2022-11-08,aktif,49662462.0
+M0319,Gadget Pak Haji,Electronics,service,retailer,Jakarta,Sudirman,Ya,Giro,2021-04-08,aktif,87903459.0
+M0320,Toko IT Anugrah,Electronics,accessories,retailer,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2020-11-08,aktif,58402616.0
+M0321,Digital Abadi,Electronics,gadget,retailer,Depok,Cinere,Ya,Giro,2019-11-16,aktif,71649473.0
+M0322,PT Elektronik Sejahtera,Electronics,accessories,supplier,Depok,Cimanggis,Tidak,,,,473719352.0
+M0323,Digital Sentosa,Electronics,computer,retailer,Depok,Cinere,Ya,"EDC, QRIS, Giro",2020-02-24,aktif,31440309.0
+M0324,Gadget Prima,Electronics,gadget,retailer,Bogor,Tanah Sareal,Ya,QRIS,2025-11-04,aktif,
+M0325,Gadget Purnama,Electronics,service,retailer,Depok,Cinere,Tidak,,,,26551169.0
+M0326,Toko IT Harmoni,Electronics,accessories,retailer,Jakarta,Kelapa Gading,Tidak,,,,22014904.0
+M0327,,Electronics,computer,retailer,Bogor,Sentul,Ya,"QRIS, Giro",2025-10-24,aktif,186194016.0
+M0328,Gadget Bang Jali,Electronics,computer,retailer,Depok,Sawangan,Tidak,,,,133885621.0
+M0329,Gadget Mbak Sri,Electronics,service,retailer,Depok,Margonda,Ya,Giro,2025-08-29,aktif,115145584.0
+M0330,Gadget Harmoni,Electronics,service,retailer,Bandung,,Ya,"EDC, QRIS, Giro",2020-12-08,tidak aktif,115584330.0
+M0331,Toko IT Sejahtera,Electronics,accessories,retailer,Jakarta,Pluit,Ya,QRIS,2023-06-19,aktif,64940232.0
+M0332,CV Tech Supply Abadi,Electronics,computer,supplier,Tangerang,Cipondoh,Ya,"EDC, QRIS",2019-11-20,aktif,143550364.0
+M0333,Digital Sentosa,Electronics,accessories,retailer,Bekasi,Harapan Indah,Tidak,,,,70295904.0
+M0334,Toko IT Sumber,Electronics,gadget,retailer,Jakarta,Tebet,Ya,"QRIS, Giro",2019-08-14,aktif,35696187.0
+M0335,Gadget Sejahtera,Electronics,computer,retailer,Jakarta,Menteng,Ya,"EDC, QRIS",2024-11-12,aktif,157921362.0
+M0336,Gadget Persada,Electronics,gadget,retailer,Bogor,Dramaga,Tidak,,,,57520292.0
+M0337,Komputer Bang Jali,Electronics,gadget,retailer,Bandung,Setiabudhi,Ya,"QRIS, Giro",2019-11-12,aktif,31235084.0
+M0338,Gadget Anugrah,Electronics,computer,retailer,Jakarta,Kuningan,Ya,QRIS,2025-06-08,aktif,49167959.0
+M0339,PT Elektronik Mulia,Electronics,gadget,supplier,Jakarta,Menteng,Ya,Giro,2020-09-06,aktif,409458111.0
+M0340,Gadget Pratama,Electronics,computer,retailer,Bekasi,Grand Galaxy,Ya,"EDC, QRIS, Giro",2022-08-03,aktif,39533062.0
+M0341,UD Oli Barokah,Automotive,sparepart,supplier,Bandung,Dago,Ya,"QRIS, Giro",2019-07-08,aktif,152431166.0
+M0342,CV Sparepart Abadi,Automotive,accessories,supplier,Bandung,Cihampelas,Ya,EDC,2022-04-09,aktif,357608642.0
+M0343,CV Sparepart Mbak Sri,Automotive,sparepart,supplier,Bogor,Tanah Sareal,Tidak,,,,357974837.0
+M0344,PT Otomotif Purnama,Automotive,bengkel,supplier,Bogor,Sentul,Ya,"EDC, QRIS",2019-02-09,aktif,196160833.0
+M0345,Bengkel Sukses,Automotive,sparepart,retailer,Depok,Sawangan,Ya,QRIS,2020-08-06,aktif,42972267.0
+M0346,Auto Bu Tini,Automotive,bengkel,retailer,Bekasi,Grand Galaxy,Ya,"QRIS, Giro",2020-06-30,aktif,80909754.0
+M0347,Bengkel Sumber,Automotive,sparepart,retailer,Bekasi,Kemang Pratama,Ya,"EDC, QRIS",2022-07-14,aktif,
+M0348,Auto Berkah,Automotive,bengkel,retailer,Bandung,Setiabudhi,Tidak,,,,18500024.0
+M0349,Toko Sparepart Mandiri,Automotive,sparepart,retailer,Bekasi,,Ya,"EDC, QRIS",2023-07-24,aktif,34394258.0
+M0350,Motor Gemilang,Automotive,bengkel,retailer,Tangerang,Gading Serpong,Ya,"EDC, QRIS, Giro",2022-05-31,aktif,54184072.0
+M0351,Toko Sparepart Surya,Automotive,accessories,retailer,Bogor,Cibinong,Ya,"EDC, QRIS, Giro",2022-05-09,aktif,86860749.0
+M0352,Motor Mulia,Automotive,bengkel,retailer,Jakarta,Thamrin,Ya,EDC,2020-05-12,aktif,247722715.0
+M0353,Motor Anugrah,Automotive,bengkel,retailer,Bogor,Sentul,Ya,"EDC, QRIS",2019-11-04,tidak aktif,142078980.0
+M0354,Toko Sparepart Abadi,Automotive,dealer,retailer,Depok,Cimanggis,Ya,Giro,2019-07-27,aktif,56857308.0
+M0355,Motor Makmur,Automotive,accessories,retailer,Depok,Cimanggis,Tidak,,,,64545787.0
+M0356,,Automotive,dealer,retailer,Bandung,Braga,Ya,EDC,2019-05-22,aktif,26634650.0
+M0357,,Automotive,accessories,retailer,Depok,Sawangan,Ya,"EDC, QRIS",2023-04-18,aktif,64575018.0
+M0358,PT Otomotif Harmoni,Automotive,dealer,supplier,Bogor,Bogor Tengah,Ya,Giro,2022-11-10,aktif,233588852.0
+M0359,Bengkel Pratama,Automotive,sparepart,retailer,Bandung,Braga,Ya,"EDC, QRIS",2019-08-28,aktif,87788994.0
+M0360,PT Otomotif Mulia,Automotive,sparepart,supplier,Bogor,Sentul,Ya,"EDC, QRIS, Giro",2019-08-18,aktif,151821378.0
+M0361,Toko Sparepart Mulia,Automotive,dealer,retailer,Bandung,Braga,Tidak,,,,104784022.0
+M0362,Auto Prima,Automotive,sparepart,retailer,Bekasi,Summarecon,Tidak,,,,260852330.0
+M0363,PT Otomotif Mbak Sri,Automotive,bengkel,supplier,Bekasi,Harapan Indah,Ya,EDC,2025-09-30,aktif,269746147.0
+M0364,UD Oli Maju,Automotive,sparepart,supplier,Jakarta,Cempaka Putih,Ya,EDC,2022-08-18,aktif,405799347.0
+M0365,PT Otomotif Bang Jali,Automotive,dealer,supplier,Depok,Cinere,Tidak,,,,511120122.0
+M0366,Bengkel Buana,Automotive,dealer,retailer,Depok,Cimanggis,Ya,EDC,2023-11-25,tidak aktif,45759115.0
+M0367,Auto Berkah,Automotive,sparepart,retailer,Bogor,Bogor Tengah,Ya,"EDC, QRIS, Giro",2022-04-21,aktif,80332371.0
+M0368,,Automotive,dealer,retailer,Depok,Cimanggis,Tidak,,,,66408336.0
+M0369,PT Otomotif Mbak Sri,Automotive,sparepart,supplier,Bogor,Bogor Tengah,Ya,QRIS,2021-09-01,tidak aktif,318184155.0
+M0370,Auto Pak Haji,Automotive,bengkel,retailer,Depok,Margonda,Ya,EDC,2019-10-05,aktif,32745994.0
+M0371,Bengkel Harmoni,Automotive,accessories,retailer,Depok,Margonda,Tidak,,,,67124466.0
+M0372,Motor Surya,Automotive,accessories,retailer,Tangerang,Cipondoh,Ya,Giro,2025-06-25,aktif,102789982.0
+M0373,Bengkel Jaya,Automotive,dealer,retailer,Bogor,Tanah Sareal,Ya,"EDC, QRIS",2020-03-04,aktif,242382895.0
+M0374,Bengkel Buana,Automotive,accessories,retailer,Bogor,Cibinong,Tidak,,,,155684758.0
+M0375,Motor Nusantara,Automotive,bengkel,retailer,Depok,Cinere,Ya,EDC,2021-02-17,aktif,455936549.0
+M0376,CV Sparepart Mulia,Automotive,bengkel,supplier,Bandung,Cihampelas,Ya,"QRIS, Giro",2025-03-01,aktif,159271674.0
+M0377,Bengkel Karya,Automotive,accessories,retailer,Jakarta,Thamrin,Ya,QRIS,2021-04-27,aktif,143966123.0
+M0378,Auto Citra,Automotive,accessories,retailer,Tangerang,BSD,Ya,"EDC, QRIS, Giro",2021-12-21,aktif,77439520.0
+M0379,Motor Anugrah,Automotive,sparepart,retailer,Bogor,Dramaga,Ya,"EDC, QRIS",2023-12-07,aktif,471213876.0
+M0380,Toko Sparepart Mandiri,Automotive,bengkel,retailer,Bekasi,Summarecon,Tidak,,,,31722334.0
+M0381,PT Otomotif Barokah,Automotive,accessories,supplier,Tangerang,Karawaci,Tidak,,,,150311824.0
+M0382,Toko Sparepart Mas Bro,Automotive,dealer,retailer,Bekasi,Grand Galaxy,Ya,"EDC, QRIS, Giro",2019-05-23,aktif,38284153.0
+M0383,PT Otomotif Bersama,Automotive,accessories,supplier,Bekasi,Kemang Pratama,Ya,EDC,2021-05-17,aktif,53805347.0
+M0384,Toko Sparepart Prima,Automotive,dealer,retailer,Jakarta,,Ya,"EDC, QRIS, Giro",2019-10-02,aktif,40907356.0
+M0385,Auto Bang Jali,Automotive,accessories,retailer,Bekasi,Harapan Indah,Tidak,,,,33157536.0
+M0386,Bengkel Purnama,Automotive,sparepart,retailer,Depok,Cimanggis,Ya,"QRIS, Giro",2025-07-14,aktif,75176888.0
+M0387,UD Oli Surya,Automotive,accessories,supplier,Jakarta,Kemang,Ya,"EDC, QRIS, Giro",2024-06-11,aktif,
+M0388,Motor Prima,Automotive,accessories,retailer,Bogor,Dramaga,Ya,"EDC, QRIS",2021-08-31,aktif,355328671.0
+M0389,Auto Lestari,Automotive,dealer,retailer,Bandung,Dago,Ya,Giro,2020-02-07,aktif,154450073.0
+M0390,UD Oli Purnama,Automotive,bengkel,supplier,Bandung,Cihampelas,Ya,EDC,2023-07-26,aktif,185483609.0
+M0391,Toko Sparepart Sentosa,Automotive,dealer,retailer,Jakarta,Senayan,Tidak,,,,29251072.0
+M0392,Bengkel Indonesia,Automotive,sparepart,retailer,Bogor,Bogor Tengah,Tidak,,,,102229133.0
+M0393,Bengkel Bu Tini,Automotive,bengkel,retailer,Jakarta,Tebet,Tidak,,,,20010948.0
+M0394,Motor Kang Asep,Automotive,accessories,retailer,Bandung,,Tidak,,,,341313814.0
+M0395,Toko Sparepart Anugrah,Automotive,accessories,retailer,Depok,Margonda,Ya,EDC,2024-04-27,aktif,189802783.0
+M0396,Bengkel Karya,Automotive,bengkel,retailer,Bogor,Dramaga,Ya,EDC,2025-06-01,aktif,
+M0397,Auto Purnama,Automotive,bengkel,retailer,Depok,Cinere,Tidak,,,,14050645.0
+M0398,Toko Sparepart Sejahtera,Automotive,sparepart,retailer,Tangerang,Alam Sutera,Ya,"EDC, QRIS",2022-02-01,aktif,222065987.0
+M0399,Toko Sparepart Bu Tini,Automotive,dealer,retailer,Tangerang,,Tidak,,,,59228543.0
+M0400,PT Otomotif Sejahtera,Automotive,dealer,supplier,Tangerang,Karawaci,Ya,"QRIS, Giro",2025-10-30,aktif,792143444.0
+M0401,CV GROSIR PRIMA,Grocery,toko_kelontong,supplier,Tangerang,,Tidak,,,,443863997.0
+M0402,Butik  Buana,Fashion,accessories,retailer,Depok,Sawangan,Ya,"EDC, QRIS, Giro",2020-04-12,aktif,89684040.0
+M0403,TOKO SPAREPART SEJAHTERA,Automotive,sparepart,retailer,Tangerang,Alam Sutera,Ya,"EDC, QRIS",2022-02-01,aktif,222065987.0
+M0404,Fashion Pratama ,Fashion,clothing,retailer,Bogor,Dramaga,Ya,"EDC, QRIS, Giro",2023-10-30,aktif,20006925.0
+M0405,Mart Abadi ,Grocery,distributor,retailer,Tangerang,Karawaci,Tidak,,,,10610680.0
+M0406,PT Distributor Maju ,F&B,cafe,supplier,Tangerang,Cipondoh,Ya,EDC,2023-08-10,aktif,94840150.0
+M0407,Komputer Harmoni ,Electronics,accessories,retailer,Bekasi,Jababeka,Tidak,,,,111494462.0
+M0408,Butik Makmur ,Fashion,accessories,retailer,Bandung,Buah Batu,Tidak,,,,16795767.0
