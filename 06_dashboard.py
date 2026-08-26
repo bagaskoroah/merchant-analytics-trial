@@ -27,20 +27,27 @@ from urllib.parse import parse_qs
 # ============================================================
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-# Palet warna korporat BNI (referensi bni.co.id: background putih, aksen orange+teal).
-# Hijau/merah dipertahankan untuk semantik status BNI (bukan warna brand).
+# Palet visual BNI: orange sebagai aksen aksi dan teal sebagai warna institusional.
 THEME = {
-    'bni_orange': '#F05323',   # warna utama brand BNI
-    'bni_orange_accent': '#ED8B00',
-    'bni_teal': '#006F74',     # warna sekunder brand BNI
-    'text_dark': '#1A1A2E',    # teks header di atas background putih
-    'bni': '#1D9E75',          # hijau — sudah nasabah (semantik, bukan branding)
-    'target': '#E24B4A',       # merah — belum nasabah (semantik)
-    'priority': '#F05323',     # prioritas tinggi = BNI orange
-    'muted': '#6B7280',
+    'bni_orange': '#F15A23',
+    'bni_orange_accent': '#F7941D',
+    'bni_teal': '#006A71',
+    'bni_teal_dark': '#004B50',
+    'surface': '#FFFFFF',
+    'canvas': '#F3F7F7',
+    'border': '#DCE8E8',
+    'text_dark': '#15383C',
+    'bni': '#007A7F',
+    'target': '#D8892B',
+    'priority': '#F15A23',
+    'muted': '#68787A',
 }
 
-GRAPH_CONFIG = {'displayModeBar': False}
+GRAPH_CONFIG = {
+    'displayModeBar': False,
+    'displaylogo': False,
+    'responsive': True,
+}
 
 _BULAN_ID = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
              'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
@@ -180,9 +187,34 @@ def legend_dot(color):
 
 def mini_stat(label, value, color=""):
     return html.Div([
-        html.Div(label, className="text-muted small"),
-        html.Div(value, className=f"fw-bold {color}", style={"fontSize": "1.15rem"}),
-    ], className="mb-3")
+        html.Div(label, className="quick-stat-label"),
+        html.Div(value, className=f"quick-stat-value {color}"),
+    ], className="quick-stat")
+
+
+def apply_chart_theme(fig):
+    """Apply presentation-only styling consistently across Plotly charts."""
+    fig.update_layout(
+        font=dict(family="Poppins, Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+                  color=THEME['text_dark'], size=12),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        hoverlabel=dict(
+            bgcolor=THEME['bni_teal_dark'],
+            bordercolor=THEME['bni_teal_dark'],
+            font=dict(color='#FFFFFF', family="Poppins, sans-serif", size=12),
+        ),
+        legend=dict(font=dict(color=THEME['muted'], size=11)),
+    )
+    fig.update_xaxes(
+        showline=False, zeroline=False, gridcolor='#E8EFEF',
+        tickfont=dict(color=THEME['muted']), title_font=dict(color=THEME['muted']),
+    )
+    fig.update_yaxes(
+        showline=False, zeroline=False, gridcolor='#E8EFEF',
+        tickfont=dict(color=THEME['muted']), title_font=dict(color=THEME['muted']),
+    )
+    return fig
 
 
 # ============================================================
@@ -303,7 +335,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
             annotations=[dict(text="Tidak ada merchant untuk filter ini.<br>Coba pilih kategori atau kota lain.",
                                showarrow=False, font=dict(size=13, color=THEME['muted']))]
         )
-        return fig
+        return apply_chart_theme(fig)
 
     if len(sub) > 1:
         layout = nx.spring_layout(
@@ -325,7 +357,10 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         edge_traces.append(go.Scatter(
             x=[x0, x1, None], y=[y0, y1, None],
             mode='lines',
-            line=dict(width=max(0.3, weight_normalized * 2), color='rgba(180,180,180,0.2)'),
+            line=dict(
+                width=max(0.25, weight_normalized * 1.1),
+                color='rgba(52, 94, 98, 0.10)'
+            ),
             hovertext=(f"Shared customers: {shared_customers}<br>"
                        f"Kesamaan pelanggan: {weight:.1%}"),
             hoverinfo='text',
@@ -381,26 +416,82 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         )
         node_text.append(hover)
 
-    # Label nama hanya untuk merchant paling berpengaruh (top by pagerank) supaya tidak cluttered
-    label_count = min(15, len(node_prs))
-    top_label_ids = {n for n, _, _ in sorted(node_prs, key=lambda t: t[1], reverse=True)[:label_count]}
-    node_labels = [str(nama)[:18] if (nid in top_label_ids and pd.notna(nama)) else ''
-                   for nid, pr, nama in node_prs]
+    # Pilih label penting dengan collision guard. Seluruh nama tetap tersedia di hover,
+    # tetapi label permanen hanya ditampilkan jika posisinya cukup jauh dari label lain.
+    if len(node_prs) <= 10:
+        max_label_count = len(node_prs)
+    elif len(node_prs) <= 30:
+        max_label_count = 9
+    else:
+        max_label_count = 8
 
-    # Ukuran node: minimum 12, maksimum 52 agar node terkecil tetap terlihat
+    x_values = [layout[n][0] for n, _, _ in node_prs]
+    y_values = [layout[n][1] for n, _, _ in node_prs]
+    x_min, x_max = min(x_values), max(x_values)
+    y_min, y_max = min(y_values), max(y_values)
+    x_span = max(x_max - x_min, 1e-9)
+    y_span = max(y_max - y_min, 1e-9)
+    center_x = (x_min + x_max) / 2
+    center_y = (y_min + y_max) / 2
+
+    selected_labels = []
+    for node_id, pr, nama in sorted(node_prs, key=lambda t: t[1], reverse=True):
+        if pd.isna(nama) or not str(nama).strip():
+            continue
+        x, y = layout[node_id]
+        x_norm = (x - x_min) / x_span
+        y_norm = (y - y_min) / y_span
+        overlaps_existing = any(
+            abs(x_norm - chosen_x) < 0.22 and abs(y_norm - chosen_y) < 0.085
+            for chosen_x, chosen_y, *_ in selected_labels
+        )
+        if not overlaps_existing:
+            selected_labels.append((x_norm, y_norm, node_id, str(nama), x, y))
+        if len(selected_labels) >= max_label_count:
+            break
+
+    label_annotations = []
+    for _, _, node_id, nama, x, y in selected_labels:
+        dx = (x - center_x) / x_span
+        dy = (y - center_y) / y_span
+
+        # Geser callout menjauh dari pusat graph agar tidak menutup node/edge utama.
+        if abs(dx) > abs(dy) * 1.2:
+            ax = 46 if dx >= 0 else -46
+            ay = 0
+            xanchor = 'left' if dx >= 0 else 'right'
+            yanchor = 'middle'
+        else:
+            ax = 0
+            ay = -34 if dy >= 0 else 34
+            xanchor = 'center'
+            yanchor = 'bottom' if dy >= 0 else 'top'
+
+        display_name = nama if len(nama) <= 21 else f"{nama[:20]}…"
+        label_annotations.append(dict(
+            x=x, y=y, text=display_name,
+            showarrow=True, arrowhead=0, arrowsize=0.7, arrowwidth=1,
+            arrowcolor='rgba(61, 91, 94, 0.45)',
+            ax=ax, ay=ay, xanchor=xanchor, yanchor=yanchor,
+            bgcolor='rgba(255, 255, 255, 0.94)',
+            bordercolor='rgba(200, 218, 218, 0.90)', borderwidth=1, borderpad=3,
+            font=dict(size=9, color=THEME['text_dark']),
+        ))
+
+    # Ukuran node lebih terkendali agar cluster padat tetap terbaca.
     if pr_values:
         pr_min, pr_max = min(pr_values), max(pr_values)
-        node_size = [12 + (pr - pr_min) / (pr_max - pr_min + 1e-10) * 40 for pr in pr_values]
+        node_size = [10 + (pr - pr_min) / (pr_max - pr_min + 1e-10) * 34 for pr in pr_values]
     else:
         node_size = []
 
     node_trace = go.Scatter(
         x=node_x, y=node_y,
-        mode='markers+text',
-        marker=dict(size=node_size, color=node_color, line=dict(width=1, color='white')),
-        text=node_labels,
-        textposition='top center',
-        textfont=dict(size=9, color='#374151'),
+        mode='markers',
+        marker=dict(
+            size=node_size, color=node_color, opacity=0.88,
+            line=dict(width=1.2, color='rgba(255,255,255,0.95)')
+        ),
         hovertext=node_text,
         hoverinfo='text',
         customdata=node_ids,
@@ -412,15 +503,22 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         title=None,
         showlegend=False,
         hovermode='closest',
-        margin=dict(l=0, r=0, t=10, b=10),
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        margin=dict(l=18, r=18, t=24, b=24),
+        xaxis=dict(
+            showgrid=False, zeroline=False, showticklabels=False,
+            range=[x_min - x_span * 0.16, x_max + x_span * 0.16],
+        ),
+        yaxis=dict(
+            showgrid=False, zeroline=False, showticklabels=False,
+            range=[y_min - y_span * 0.18, y_max + y_span * 0.18],
+        ),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         height=height,
+        annotations=label_annotations,
     )
     # Legend & caption ada sebagai komponen HTML terpisah di CardHeader, bukan di dalam plot
-    return fig
+    return apply_chart_theme(fig)
 
 
 def build_graph_legend():
@@ -452,7 +550,7 @@ def build_kategori_composition_figure():
     fig.update_traces(textposition='outside')
     fig.update_layout(margin=dict(l=50, r=20, t=30, b=40), height=380,
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, title=None))
-    return fig
+    return apply_chart_theme(fig)
 
 
 def build_ecosystem_opportunity_figure():
@@ -460,7 +558,7 @@ def build_ecosystem_opportunity_figure():
     bukan penetrasi (supaya ekosistem dengan penetrasi rendah tampil sebagai peluang, bukan kesan negatif)."""
     comm_analysis = ecosystem_summary.sort_values('non_bni_count', ascending=False).head(7)
     if len(comm_analysis) == 0:
-        return go.Figure()
+        return apply_chart_theme(go.Figure())
     comm_analysis = comm_analysis.sort_values('non_bni_count', ascending=True)
 
     fig = go.Figure(go.Bar(
@@ -480,7 +578,7 @@ def build_ecosystem_opportunity_figure():
         margin=dict(l=190, r=90, t=20, b=60), height=380,
         xaxis_title="Jumlah Merchant Belum Nasabah", yaxis_title=None,
     )
-    return fig
+    return apply_chart_theme(fig)
 
 
 def build_scatter_figure():
@@ -510,7 +608,7 @@ def build_scatter_figure():
                   fillcolor='rgba(240,83,35,0.06)', line=dict(color='rgba(240,83,35,0.35)', dash='dash'))
     fig.add_annotation(xref='paper', yref='paper', x=0.985, y=0.97, text='★ Target Ideal', showarrow=False,
                         font=dict(size=11, color=THEME['bni_orange']), xanchor='right', yanchor='top')
-    return fig
+    return apply_chart_theme(fig)
 
 
 def build_fee_per_kota_figure():
@@ -531,7 +629,7 @@ def build_fee_per_kota_figure():
         margin=dict(l=60, r=30, t=30, b=50), height=380,
         yaxis_title="Potensi MDR (Rp/bulan)", xaxis_title=None,
     )
-    return fig
+    return apply_chart_theme(fig)
 
 
 # ============================================================
@@ -737,7 +835,7 @@ app = dash.Dash(
     title="Merchant Network Analytics — BNI"
 )
 
-# CSS tambahan: font Poppins, hover state top target, nav pill (light theme)
+# Struktur HTML dasar. Seluruh presentation layer berada di assets/bni_theme.css.
 app.index_string = '''<!DOCTYPE html>
 <html>
     <head>
@@ -745,18 +843,6 @@ app.index_string = '''<!DOCTYPE html>
         <title>{%title%}</title>
         {%favicon%}
         {%css%}
-        <style>
-            body, .dash-bootstrap { font-family: 'Poppins', sans-serif; }
-            .target-row { transition: background-color 0.15s ease; cursor: pointer; }
-            .target-row:hover { background-color: #FFF3EE; }
-            .nav-pill-link {
-                padding: 8px 18px; border-radius: 999px; text-decoration: none;
-                font-weight: 600; font-size: 0.9rem; margin-right: 8px; color: #1A1A2E;
-                transition: background-color 0.15s ease, color 0.15s ease;
-            }
-            .nav-pill-link.active { background-color: #F05323; color: #fff !important; }
-            .nav-pill-link:not(.active):hover { background-color: #F3F4F6; color: #F05323 !important; }
-        </style>
     </head>
     <body>
         {%app_entry%}
@@ -791,40 +877,33 @@ model_auc = product_model_metadata.get('test_metrics', {}).get('auc_roc', 0)
 def kpi_card(title, value, value_color="", subtext="", link_href=None):
     card = dbc.Card(
         dbc.CardBody([
-            html.H6(title, className="text-muted mb-1"),
-            html.H3(value, className=f"mb-1 fw-bold {value_color}",
-                     style={"fontFamily": "Consolas, Menlo, monospace", "fontSize": "1.5rem"}),
-            html.Small(subtext, className="text-muted"),
+            html.H6(title, className="kpi-label"),
+            html.H3(value, className=f"kpi-value {value_color}"),
+            html.Small(subtext, className="kpi-meta"),
         ], className="d-flex flex-column justify-content-center h-100"),
-        className="shadow-sm border-0",
-        style={"height": "120px", "borderRadius": "12px"}
+        className="kpi-card"
     )
     if link_href:
-        return dcc.Link(card, href=link_href, style={"textDecoration": "none", "color": "inherit"})
+        return dcc.Link(card, href=link_href, className="kpi-link")
     return card
 
 
 def build_header():
-    logo = html.Img(src='/assets/bni_logo.png', style={"height": "40px"}, className="me-3") if HAS_LOGO else \
-        html.Div("BNI", className="me-3", style={
-            "backgroundColor": THEME['bni_orange'], "color": "#fff", "padding": "6px 14px",
-            "borderRadius": "6px", "fontSize": "1.2rem", "fontWeight": "700", "letterSpacing": "1px"
-        })
+    logo = html.Img(src='/assets/bni_logo.png', className="brand-logo") if HAS_LOGO else \
+        html.Div("BNI", className="brand-mark")
 
     return dbc.Row([
         dbc.Col([
             html.Div([
                 logo,
                 html.Div([
-                    html.H2("Merchant Network Analytics", className="mb-0",
-                             style={"fontSize": "1.4rem", "color": THEME['text_dark']}),
-                    html.P("Merchant Acquisition Dashboard", className="mb-0",
-                           style={"fontSize": "0.82rem", "color": THEME['muted']}),
+                    html.H2("Merchant Network Analytics", className="brand-title"),
+                    html.P("Merchant Acquisition Dashboard", className="brand-subtitle"),
                 ]),
-            ], className="d-flex align-items-center"),
+            ], className="brand-block"),
         ], width=12, lg=5),
         dbc.Col([
-            html.Div(id='nav-links', className="mt-2"),
+            html.Div(id='nav-links', className="nav-shell"),
         ], width=12, lg=4),
         dbc.Col([
             html.Div([
@@ -833,9 +912,9 @@ def build_header():
                     f"{GRAPH_COVERAGE} merchant terpetakan dalam jaringan",
                     className="text-muted"
                 ),
-            ], className="text-lg-end mt-2 small", style={"color": THEME['muted']}),
+            ], className="header-meta"),
         ], width=12, lg=3),
-    ], className="py-2 g-2 align-items-center")
+    ], className="app-header-row g-2 align-items-center")
 
 
 def build_footer():
@@ -853,18 +932,18 @@ def build_footer():
                 className="text-muted d-block mt-1"
             )
         ])
-    ], className="mt-4 mb-2")
+    ], className="technical-footer")
 
 
 def build_chat_empty_state():
     return html.Div([
-        html.Div("👋 Tanyakan apa saja tentang target akuisisi merchant.", className="text-muted mb-2"),
+        html.Div("Tanyakan apa saja tentang target akuisisi merchant.", className="chat-empty-title"),
         html.Div([
             dbc.Button(q, id={'type': 'chat-example', 'index': i}, size="sm", outline=True,
-                       color="secondary", className="me-2 mb-2", style={"borderRadius": "999px"})
+                       color="secondary", className="chat-suggestion")
             for i, q in enumerate(CHAT_EXAMPLES)
-        ]),
-    ], className="p-2")
+        ], className="chat-suggestions"),
+    ], className="chat-empty-state")
 
 
 def quick_summary_panel(n_filtered, n_target, n_priority, fee):
@@ -873,7 +952,7 @@ def quick_summary_panel(n_filtered, n_target, n_priority, fee):
         dbc.Col(mini_stat("Target Akuisisi", f"{n_target}", "text-danger"), width=6),
         dbc.Col(mini_stat("Prioritas Tinggi", f"{n_priority}", "text-warning"), width=6),
         dbc.Col(mini_stat("Estimasi MDR", format_rupiah_short(fee), "text-primary"), width=6),
-    ])
+    ], className="quick-summary-grid")
 
 
 # ============================================================
@@ -884,7 +963,7 @@ def overview_layout():
         dbc.Alert(
             "Rekomendasi produk masih bersifat eksperimental dan digunakan sebagai arahan awal, "
             "bukan keputusan final RM.",
-            color="warning", className="mb-3", dismissable=True,
+            color="warning", className="model-alert", dismissable=True,
         ) if PRODUCT_MODEL_EXPERIMENTAL else None,
 
         # KPI Cards
@@ -906,6 +985,12 @@ def overview_layout():
         # Satu set filter untuk seluruh halaman — mengontrol graph + top targets + ringkasan
         dbc.Card([
             dbc.CardBody([
+                html.Div([
+                    html.Div("FILTER", className="section-eyebrow"),
+                    html.H5("Fokus analisis", className="filter-title"),
+                    html.P("Persempit tampilan untuk menyorot peluang yang paling relevan.",
+                           className="filter-description"),
+                ], className="filter-intro"),
                 dbc.Row([
                     dbc.Col([
                         html.Label("Kategori", className="fw-bold small mb-1"),
@@ -931,7 +1016,7 @@ def overview_layout():
                     ], width=12, md=6),
                 ], className="g-3 align-items-end"),
             ])
-        ], className="shadow-sm border-0 mb-3", style={"borderRadius": "12px"}),
+        ], className="filter-card mb-3"),
 
         # ROW 1 (paling actionable): Network Graph + Asisten AI sejajar
         dbc.Row([
@@ -939,7 +1024,7 @@ def overview_layout():
                 dbc.Card([
                     dbc.CardHeader([
                         html.H5("Peta Jaringan Pelanggan", className="mb-1"),
-                        html.Small("Garis = kesamaan pelanggan · ukuran lingkaran = tingkat pengaruh",
+                        html.Small("Garis = kesamaan pelanggan · ukuran lingkaran = tingkat pengaruh · arahkan kursor untuk detail",
                                    className="text-muted d-block mb-2"),
                         build_graph_legend(),
                     ]),
@@ -950,20 +1035,18 @@ def overview_layout():
                             id='node-detail-panel', className="mt-2"
                         ),
                     ])
-                ], className="shadow-sm border-0", style={"borderRadius": "12px"})
+                ], className="dashboard-card network-card")
             ], width=12, lg=8, className="mb-3 mb-lg-0"),
 
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("💬 Asisten Rekomendasi Akuisisi", className="mb-0")),
+                    dbc.CardHeader([
+                        html.Div("AI ASSISTANT", className="section-eyebrow"),
+                        html.H5("Asisten Rekomendasi Akuisisi", className="mb-0"),
+                    ]),
                     dbc.CardBody([
                         dcc.Loading(
-                            html.Div(build_chat_empty_state(), id='chat-history', style={
-                                "height": "420px", "overflowY": "auto",
-                                "border": "1px solid #dee2e6", "borderRadius": "8px",
-                                "backgroundColor": "#f8f9fa",
-                                "marginBottom": "10px"
-                            }),
+                            html.Div(build_chat_empty_state(), id='chat-history', className="chat-history"),
                             type="dot", color=THEME['bni_orange']
                         ),
                         dbc.InputGroup([
@@ -971,11 +1054,10 @@ def overview_layout():
                                 id='chat-input', type='text',
                                 placeholder='Tanya: "Merchant mana prioritas di Bogor kategori F&B?"',
                             ),
-                            dbc.Button("Kirim", id='chat-send', color="primary", className="ms-2",
-                                       style={"backgroundColor": THEME['bni_orange'], "borderColor": THEME['bni_orange']}),
+                            dbc.Button("Kirim", id='chat-send', color="primary", className="bni-button ms-2"),
                         ]),
                     ])
-                ], className="shadow-sm border-0", style={"borderRadius": "12px"})
+                ], className="dashboard-card assistant-card")
             ], width=12, lg=4),
         ], className="mb-3 g-3"),
 
@@ -1000,14 +1082,14 @@ def overview_layout():
                         html.Div(id='target-context', className="mb-2"),
                         html.Div(id='target-table'),
                     ])
-                ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
+                ], className="dashboard-card h-100")
             ], width=12, lg=8, className="mb-3 mb-lg-0"),
 
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Ringkasan Cepat", className="mb-0")),
                     dbc.CardBody([html.Div(id='quick-summary')])
-                ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
+                ], className="dashboard-card h-100 quick-summary-card")
             ], width=12, lg=4),
         ], className="mb-3 g-3"),
 
@@ -1028,11 +1110,12 @@ def ecosystem_detail_layout(default_community=None):
     default_value = default_community if default_community in valid_ids else int(ecosystem_summary.iloc[0]['community_id'])
 
     return html.Div([
+        html.Div("ECOSYSTEM INTELLIGENCE", className="page-eyebrow"),
         dbc.Row([
             dbc.Col([
-                html.H4("Detail Ekosistem Bisnis", className="mb-1", style={"color": THEME['text_dark']}),
+                html.H4("Detail Ekosistem Bisnis", className="page-title"),
                 html.P("Ekosistem mana yang paling potensial, dan siapa anggotanya?",
-                       className="text-muted mb-3"),
+                       className="page-description"),
                 html.Label("Pilih Ekosistem", className="fw-bold"),
                 dcc.Dropdown(id='ecosystem-selector', options=options, value=default_value,
                              clearable=False, className="mb-3"),
@@ -1084,9 +1167,10 @@ def ecosystem_detail_layout(default_community=None):
 # ============================================================
 def analytics_layout():
     return html.Div([
-        html.H4("Analytics & Insight", className="mb-1", style={"color": THEME['text_dark']}),
+        html.Div("PORTFOLIO VIEW", className="page-eyebrow"),
+        html.H4("Analytics & Insight", className="page-title"),
         html.P("Gambaran besar peta merchant dan area dengan peluang akuisisi terbesar.",
-               className="text-muted mb-3"),
+               className="page-description"),
 
         dbc.Row([
             dbc.Col([
@@ -1136,13 +1220,12 @@ app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
     html.Div(
         dbc.Container(build_header(), fluid=True),
-        style={"position": "sticky", "top": "0", "zIndex": "1000",
-               "backgroundColor": "#FFFFFF", "borderBottom": "1px solid #e5e7eb"}
+        className="app-header"
     ),
     dbc.Container([
         html.Div(id='page-content'),
-    ], fluid=True, className="py-3")
-])
+    ], fluid=True, className="app-main")
+], className="app-shell")
 
 
 # ============================================================
@@ -1262,7 +1345,7 @@ def update_target_table(kategori, kota, limit):
                     html.Small(fee_display_text(row), className="text-success d-block fw-bold"),
                     html.Small(f"Rekomendasi produk: {produk}", className="text-primary d-block"),
                     html.Hr(className="my-1"),
-                ], className="mb-1 p-1 rounded target-row")
+                ], className="target-row target-row--priority")
             )
         else:
             # Prioritas Rendah — dibuat subtle, tanpa fee income, agar tidak mendominasi
@@ -1272,7 +1355,7 @@ def update_target_table(kategori, kota, limit):
                     dbc.Badge(badge_label, color=badge_color, className="ms-1", style={"fontSize": "0.65rem"}),
                     html.Span(f" · {row.get('kategori','-')} · {row.get('kota','-')}",
                               className="text-muted", style={"fontSize": "0.78rem"}),
-                ], className="mb-1 target-row p-1 rounded")
+                ], className="target-row target-row--low")
             )
 
     children = list(high_med_rows)
@@ -1334,8 +1417,7 @@ def on_node_click(clickData):
             )
         )
 
-    return dbc.Card([dbc.CardBody(detail_children)],
-                     className="border-0 shadow-sm", style={"borderRadius": "12px", "backgroundColor": "#f8f9fa"})
+    return dbc.Card([dbc.CardBody(detail_children)], className="node-detail-card")
 
 
 @app.callback(
@@ -1380,7 +1462,7 @@ def handle_chat(send_clicks, example_clicks, user_input, chat_history):
                 html.Div([
                     html.Strong("Anda: ", className="text-primary"),
                     html.Span(msg['content']),
-                ], className="mb-2 p-2 bg-white rounded")
+                ], className="chat-message chat-message--user")
             )
         else:
             chat_display.append(
@@ -1390,7 +1472,7 @@ def handle_chat(send_clicks, example_clicks, user_input, chat_history):
                         dcc.Markdown(msg['content']),
                         className="mt-1"
                     ),
-                ], className="mb-2 p-2 bg-light rounded border-start border-success border-3")
+                ], className="chat-message chat-message--assistant")
             )
 
     return chat_display, chat_history, ""
@@ -1515,7 +1597,7 @@ def update_ecosystem_member_table(community_id, limit):
             html.Td(fee_display_text(row, prefix="")),
         ], className="target-row"))
     return dbc.Table([table_header, html.Tbody(table_rows)],
-                      bordered=False, hover=True, responsive=True, size="sm", className="mb-0")
+                      bordered=False, hover=True, responsive=True, size="sm", className="merchant-table mb-0")
 
 
 # ============================================================
