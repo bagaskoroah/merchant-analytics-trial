@@ -10,6 +10,7 @@ xgboost
 shap
 imbalanced-learn
 dash
+dash-bootstrap-components
 plotly
 anthropic
 jupyter
