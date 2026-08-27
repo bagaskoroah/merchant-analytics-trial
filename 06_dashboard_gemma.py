@@ -49,6 +49,21 @@ GRAPH_CONFIG = {
     'responsive': True,
 }
 
+NETWORK_GRAPH_CONFIG = {
+    **GRAPH_CONFIG,
+    'displayModeBar': True,
+    'scrollZoom': True,
+    'doubleClick': 'reset+autosize',
+    'modeBarButtonsToRemove': ['select2d', 'lasso2d'],
+}
+
+ANALYTICS_CHART_HEIGHT = 420
+ANALYTICS_GRAPH_STYLE = {
+    'width': '100%',
+    'height': f'{ANALYTICS_CHART_HEIGHT}px',
+    'minHeight': f'{ANALYTICS_CHART_HEIGHT}px',
+}
+
 _BULAN_ID = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
              'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
@@ -255,6 +270,10 @@ def influence_badge(pr_value):
 
 
 def get_produk_rekomendasi(row):
+    # Product recommendation hanya actionable untuk merchant target akuisisi.
+    # Guard ini mencegah output model bocor ke komponen lain untuk merchant existing.
+    if row.get('is_bni_acquiring') != 'Tidak':
+        return '-'
     recommendation = row.get('product_recommendation', 'QRIS') or 'QRIS'
     proba_edc = float(row.get('product_rec_proba_edc', 0.5) or 0.5)
     confidence = proba_edc if recommendation == 'QRIS + EDC' else 1 - proba_edc
@@ -312,7 +331,7 @@ def economic_hover_text(row):
         return ''
     e = get_merchant_economics(row)
     return (
-        f"<br><b>Economic opportunity</b><br>"
+        f"<br><br><b>Economic Opportunity</b><br>"
         f"Gross MDR: {format_rupiah_short(e['gross_mdr'])}/bulan<br>"
         f"Fee-Based Income Bersih (85% MDR): {format_rupiah_short(e['net_fbi'])}/bulan<br>"
         f"Asumsi biaya produk: {format_rupiah_short(e['product_cost'])}/bulan<br>"
@@ -460,7 +479,8 @@ def get_matching_merchant_ids(view='all', kategori=None, kota=None):
     return df
 
 
-def build_network_figure(view='all', kategori=None, kota=None, height=600):
+def build_network_figure(view='all', kategori=None, kota=None, height=600,
+                         focus_merchant_id=None, flexible_navigation=False):
     """Build plotly figure untuk network graph.
     Di halaman Overview, HANYA dikontrol oleh filter kategori/kota (satu sumber filter,
     tidak ada lagi dropdown ekosistem terpisah — lihat FIX 1 V4). Parameter `view` tetap
@@ -468,15 +488,21 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
     Kalau kategori & kota = 'Semua', dibatasi ke top N merchant paling berpengaruh supaya
     tidak overwhelming; kalau difilter, tampilkan seluruh merchant yang match.
     """
-    df_match = get_matching_merchant_ids(view, kategori, kota)
-    is_unfiltered_all = (view in (None, 'all')) and (not kategori or kategori == 'Semua') and (not kota or kota == 'Semua')
-
-    if is_unfiltered_all:
-        ids = df_match.nlargest(TOP_N_NODES, 'degree')['merchant_id'].tolist()
+    if focus_merchant_id in G:
+        # Focused ego-network: merchant terpilih dan seluruh tetangga langsungnya.
+        # Filter halaman sengaja tidak diterapkan agar relasi satu hop tidak terpotong.
+        sub = nx.ego_graph(G, focus_merchant_id, radius=1).copy()
     else:
-        ids = df_match['merchant_id'].tolist()
-    ids = [i for i in ids if i in G.nodes()]
-    sub = G.subgraph(ids).copy()
+        focus_merchant_id = None
+        df_match = get_matching_merchant_ids(view, kategori, kota)
+        is_unfiltered_all = (view in (None, 'all')) and (not kategori or kategori == 'Semua') and (not kota or kota == 'Semua')
+
+        if is_unfiltered_all:
+            ids = df_match.nlargest(TOP_N_NODES, 'degree')['merchant_id'].tolist()
+        else:
+            ids = df_match['merchant_id'].tolist()
+        ids = [i for i in ids if i in G.nodes()]
+        sub = G.subgraph(ids).copy()
 
     if len(sub) == 0:
         fig = go.Figure()
@@ -497,26 +523,62 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         layout = {list(sub.nodes())[0]: (0, 0)}
 
     edge_traces = []
+    focus_edge_traces = []
     q90 = affinity_edge_table['jaccard'].quantile(0.9)
+    shared_q90 = affinity_edge_table['shared_customers'].quantile(0.9)
+    merchant_names = merchants_display.set_index('merchant_id')['nama'].to_dict()
     for u, v, data in sub.edges(data=True):
         x0, y0 = layout[u]
         x1, y1 = layout[v]
         weight = data.get('jaccard', 0)
         shared_customers = int(data.get('shared_customers', 0))
         weight_normalized = min(1.0, weight / q90) if q90 else 0
+        shared_normalized = min(1.0, shared_customers / shared_q90) if shared_q90 else 0
+        is_focus_edge = focus_merchant_id is not None and focus_merchant_id in (u, v)
 
-        edge_traces.append(go.Scatter(
+        if is_focus_edge:
+            # Untuk ego-network, ketebalan menunjukkan Jaccard dan intensitas warna
+            # menunjukkan banyaknya pelanggan bersama. P90 menjaga outlier tetap terbaca.
+            edge_width = 1.2 + weight_normalized * 4.8
+            edge_opacity = 0.28 + shared_normalized * 0.62
+            edge_color = f'rgba(0, 106, 113, {edge_opacity:.2f})'
+            relation_context = 'Hubungan langsung dengan merchant yang dipilih'
+        elif focus_merchant_id is not None:
+            # Relasi antar-neighbor dipertahankan sebagai konteks, tetapi tidak
+            # boleh mengalahkan edge yang langsung menuju merchant fokus.
+            edge_width = 0.35 + weight_normalized * 0.75
+            edge_opacity = 0.06 + shared_normalized * 0.10
+            edge_color = f'rgba(104, 120, 122, {edge_opacity:.2f})'
+            relation_context = 'Hubungan antara merchant di sekitar'
+        else:
+            edge_width = max(0.25, weight_normalized * 1.1)
+            edge_color = 'rgba(52, 94, 98, 0.10)'
+            relation_context = 'Relasi merchant'
+
+        edge_trace = go.Scatter(
             x=[x0, x1, None], y=[y0, y1, None],
             mode='lines',
             line=dict(
-                width=max(0.25, weight_normalized * 1.1),
-                color='rgba(52, 94, 98, 0.10)'
+                width=edge_width,
+                color=edge_color,
             ),
-            hovertext=(f"Shared customers: {shared_customers}<br>"
-                       f"Kesamaan pelanggan: {weight:.1%}"),
+            hovertext=(
+                f"<b>{merchant_names.get(u, u)} ↔ {merchant_names.get(v, v)}</b><br>"
+                f"{relation_context}<br>"
+                f"Pelanggan bersama: {shared_customers}<br>"
+                f"Kemiripan pelanggan: {weight:.1%}"
+            ),
             hoverinfo='text',
+            cliponaxis=False,
             showlegend=False
-        ))
+        )
+        if is_focus_edge:
+            focus_edge_traces.append(edge_trace)
+        else:
+            edge_traces.append(edge_trace)
+
+    # Direct focus edges dirender terakhir agar selalu terlihat di atas edge konteks.
+    edge_traces.extend(focus_edge_traces)
 
     # Node trace — split by BNI status
     node_x, node_y, node_color, node_text, node_ids, pr_values, node_prs = [], [], [], [], [], [], []
@@ -552,6 +614,10 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         nama = row.get('nama', 'Unknown')
         degree = int(row.get('degree', 0))
         bni_ratio = row.get('connected_bni_ratio', 0)
+        product_hover = (
+            f"Rekomendasi produk: {get_produk_rekomendasi(row)}<br>"
+            if is_bni == 'Tidak' else ''
+        )
         hover = (
             f"<b>{nama}</b><br>"
             f"ID: {node}<br>"
@@ -562,7 +628,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
             f"Merchant dengan pelanggan serupa: {degree} ({bni_ratio:.0%} sudah BNI)<br>"
             f"Jumlah pelanggan: {int(row.get('n_customers', 0))}<br>"
             f"Rata-rata kesamaan pelanggan: {row.get('avg_neighbor_jaccard', 0):.1%}<br>"
-            f"Rekomendasi produk: {get_produk_rekomendasi(row)}<br>"
+            f"{product_hover}"
             f"Ekosistem bisnis: {get_ecosystem_label(int(comm)) if comm != -1 else 'Belum terklasifikasi'}"
             + economic_hover_text(row)
         )
@@ -587,7 +653,11 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
     center_y = (y_min + y_max) / 2
 
     selected_labels = []
-    for node_id, pr, nama in sorted(node_prs, key=lambda t: t[1], reverse=True):
+    for node_id, pr, nama in sorted(
+        node_prs,
+        key=lambda t: (t[0] == focus_merchant_id, t[1]),
+        reverse=True,
+    ):
         if pd.isna(nama) or not str(nama).strip():
             continue
         x, y = layout[node_id]
@@ -634,35 +704,64 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
     if pr_values:
         pr_min, pr_max = min(pr_values), max(pr_values)
         node_size = [10 + (pr - pr_min) / (pr_max - pr_min + 1e-10) * 34 for pr in pr_values]
+        if focus_merchant_id is not None:
+            node_size = [size + 8 if node_id == focus_merchant_id else size
+                         for size, node_id in zip(node_size, node_ids)]
     else:
         node_size = []
+
+    node_line_width = [3.5 if node_id == focus_merchant_id else 1.2 for node_id in node_ids]
+    node_line_color = [THEME['text_dark'] if node_id == focus_merchant_id
+                       else 'rgba(255,255,255,0.95)' for node_id in node_ids]
 
     node_trace = go.Scatter(
         x=node_x, y=node_y,
         mode='markers',
         marker=dict(
             size=node_size, color=node_color, opacity=0.88,
-            line=dict(width=1.2, color='rgba(255,255,255,0.95)')
+            line=dict(width=node_line_width, color=node_line_color)
         ),
         hovertext=node_text,
         hoverinfo='text',
         customdata=node_ids,
+        cliponaxis=False,
         showlegend=False
     )
 
+    if focus_merchant_id is not None:
+        focus_row = merchants_display[
+            merchants_display['merchant_id'] == focus_merchant_id
+        ]
+        focus_name = (focus_row.iloc[0].get('nama', focus_merchant_id)
+                      if len(focus_row) else focus_merchant_id)
+        label_annotations.append(dict(
+            xref='paper', yref='paper', x=0.01, y=1.04,
+            text=(f"Fokus: <b>{focus_name}</b> · "
+                  f"{max(len(sub) - 1, 0)} merchant terhubung langsung"),
+            showarrow=False, xanchor='left', yanchor='bottom',
+            font=dict(size=11, color=THEME['text_dark']),
+            bgcolor='rgba(255,255,255,0.92)',
+        ))
+
     fig = go.Figure(data=edge_traces + [node_trace])
+    navigation_enabled = focus_merchant_id is not None or flexible_navigation
+    x_padding = 0.28 if navigation_enabled else 0.16
+    y_padding = 0.30 if navigation_enabled else 0.18
     fig.update_layout(
         title=None,
         showlegend=False,
         hovermode='closest',
-        margin=dict(l=18, r=18, t=24, b=24),
+        dragmode='pan' if navigation_enabled else 'zoom',
+        margin=dict(l=18, r=18, t=48 if focus_merchant_id is not None else 24, b=24),
         xaxis=dict(
             showgrid=False, zeroline=False, showticklabels=False,
-            range=[x_min - x_span * 0.16, x_max + x_span * 0.16],
+            fixedrange=False,
+            range=[x_min - x_span * x_padding, x_max + x_span * x_padding],
         ),
         yaxis=dict(
             showgrid=False, zeroline=False, showticklabels=False,
-            range=[y_min - y_span * 0.18, y_max + y_span * 0.18],
+            fixedrange=False,
+            range=[y_min - y_span * y_padding, y_max + y_span * y_padding],
         ),
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
@@ -681,9 +780,37 @@ def build_graph_legend():
     ], className="small mb-2 d-flex flex-wrap")
 
 
+def build_focus_controls(controls_id, reset_button_id, reset_label):
+    """Kontrol focus mode dengan istilah bisnis yang konsisten antarhalaman."""
+    return html.Div([
+        dbc.Button(
+            f"← {reset_label}",
+            id=reset_button_id, n_clicks=0,
+            size="sm", color="secondary", outline=True,
+        ),
+        html.Small(
+            "Scroll untuk memperbesar atau memperkecil · tarik peta untuk menggeser tampilan",
+            className="text-muted ms-2",
+        ),
+        html.Small([
+            html.Strong("Arti garis dari merchant yang dipilih: "),
+            "semakin tebal = pelanggan semakin mirip · semakin pekat = pelanggan bersama semakin banyak",
+        ], className="text-muted w-100 mt-1"),
+    ], id=controls_id, className="mb-2", style={'display': 'none'})
+
+
 # ============================================================
 # ANALYTICS CHARTS (halaman Analytics — statis, tanpa filter)
 # ============================================================
+def finalize_analytics_figure(fig):
+    """Jaga chart analytics tetap responsif tanpa kehilangan tinggi atau label."""
+    fig.update_layout(autosize=True, height=ANALYTICS_CHART_HEIGHT)
+    fig.update_xaxes(automargin=True)
+    fig.update_yaxes(automargin=True)
+    fig.update_traces(cliponaxis=False)
+    return apply_chart_theme(fig)
+
+
 def build_kategori_composition_figure():
     df = merchants_display.copy()
     df['Status BNI'] = df['is_bni_acquiring'].map({'Ya': 'Sudah Nasabah', 'Tidak': 'Belum Nasabah'})
@@ -700,9 +827,9 @@ def build_kategori_composition_figure():
                  color_discrete_map={'Sudah Nasabah': THEME['bni'], 'Belum Nasabah': THEME['target']},
                  labels={'count': 'Jumlah', 'kategori': 'Kategori'})
     fig.update_traces(textposition='outside')
-    fig.update_layout(margin=dict(l=50, r=20, t=30, b=40), height=380,
+    fig.update_layout(margin=dict(l=50, r=28, t=58, b=64),
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, title=None))
-    return apply_chart_theme(fig)
+    return finalize_analytics_figure(fig)
 
 
 def build_ecosystem_opportunity_figure():
@@ -727,10 +854,10 @@ def build_ecosystem_opportunity_figure():
         ),
     ))
     fig.update_layout(
-        margin=dict(l=190, r=90, t=20, b=60), height=380,
+        margin=dict(l=190, r=90, t=36, b=60),
         xaxis_title="Jumlah Merchant Belum Nasabah", yaxis_title=None,
     )
-    return apply_chart_theme(fig)
+    return finalize_analytics_figure(fig)
 
 
 def build_scatter_figure():
@@ -753,14 +880,14 @@ def build_scatter_figure():
         opacity=0.75, size_max=32,
     )
     fig.update_layout(
-        margin=dict(l=60, r=30, t=30, b=50), height=420,
+        margin=dict(l=60, r=36, t=58, b=60),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, title=None),
     )
     fig.add_shape(type='rect', xref='paper', yref='paper', x0=0.62, x1=1, y0=0.62, y1=1,
                   fillcolor='rgba(240,83,35,0.06)', line=dict(color='rgba(240,83,35,0.35)', dash='dash'))
     fig.add_annotation(xref='paper', yref='paper', x=0.985, y=0.97, text='★ Target Ideal', showarrow=False,
                         font=dict(size=11, color=THEME['bni_orange']), xanchor='right', yanchor='top')
-    return apply_chart_theme(fig)
+    return finalize_analytics_figure(fig)
 
 
 
@@ -769,8 +896,11 @@ def build_target_per_kota_figure():
     df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
     grouped = df.groupby('kota').size().reset_index(name='target_count').sort_values('target_count', ascending=False)
     fig = go.Figure(go.Bar(x=grouped['kota'], y=grouped['target_count'], text=grouped['target_count'], textposition='outside'))
-    fig.update_layout(yaxis_title='Jumlah target non-BNI', xaxis_title=None)
-    return apply_chart_theme(fig)
+    fig.update_layout(
+        margin=dict(l=60, r=30, t=42, b=64),
+        yaxis_title='Jumlah target non-BNI', xaxis_title=None,
+    )
+    return finalize_analytics_figure(fig)
 
 def build_fee_per_kota_figure():
     """Potensi MDR per kota berdasarkan omzet bulanan merchant non-BNI."""
@@ -1225,7 +1355,7 @@ def overview_layout():
                         ),
                     ], width=6, md=3),
                     dbc.Col([
-                        html.Div("Filter ini mengontrol network graph, top targets, dan ringkasan di bawah.",
+                        html.Div("Filter ini mengontrol peta jaringan, top targets, dan ringkasan di bawah.",
                                  className="text-muted small mt-4")
                     ], width=12, md=6),
                 ], className="g-3 align-items-end"),
@@ -1243,9 +1373,18 @@ def overview_layout():
                         build_graph_legend(),
                     ]),
                     dbc.CardBody([
-                        dcc.Graph(id='network-graph', figure=build_network_figure(), config=GRAPH_CONFIG),
+                        dcc.Store(id='network-focus-store', data=None),
+                        build_focus_controls(
+                            'network-focus-controls',
+                            'reset-network-view',
+                            'Kembali ke Semua Merchant',
+                        ),
+                        dcc.Graph(
+                            id='network-graph', figure=build_network_figure(),
+                            config=NETWORK_GRAPH_CONFIG,
+                        ),
                         html.Div(
-                            html.P("Klik salah satu merchant di graph untuk melihat detail.", className="text-muted mb-0"),
+                            html.P("Klik salah satu merchant di peta untuk melihat detail.", className="text-muted mb-0"),
                             id='node-detail-panel', className="mt-2"
                         ),
                     ])
@@ -1341,10 +1480,29 @@ def ecosystem_detail_layout(default_community=None):
         dbc.Row([
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Peta Jaringan Ekosistem", className="mb-0")),
-                    dbc.CardBody([dcc.Graph(id='ecosystem-mini-graph', config=GRAPH_CONFIG)])
+                    dbc.CardHeader([
+                        html.H5("Peta Jaringan Ekosistem", className="mb-1"),
+                        html.Small(
+                            "Scroll untuk memperbesar atau memperkecil · tarik peta untuk menggeser tampilan · klik dua kali untuk kembali ke tampilan awal",
+                            className="text-muted",
+                        ),
+                    ]),
+                    dbc.CardBody([
+                        dcc.Store(id='ecosystem-focus-store', data=None),
+                        build_focus_controls(
+                            'ecosystem-focus-controls',
+                            'reset-ecosystem-network',
+                            'Kembali ke Semua Merchant Ekosistem',
+                        ),
+                        dcc.Graph(
+                            id='ecosystem-mini-graph',
+                            config=NETWORK_GRAPH_CONFIG,
+                            responsive=True,
+                            style={'width': '100%', 'height': '520px', 'minHeight': '520px'},
+                        )
+                    ], style={'minWidth': 0, 'overflow': 'visible'})
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
-            ], width=12, lg=7),
+            ], width=12, lg=7, style={'minWidth': 0}),
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Rekomendasi Strategi Akuisisi", className="mb-0")),
@@ -1358,15 +1516,27 @@ def ecosystem_detail_layout(default_community=None):
                 dbc.Card([
                     dbc.CardHeader([
                         dbc.Row([
-                            dbc.Col(html.H5("Anggota Ekosistem", className="mb-0"), width=12, md=6),
+                            dbc.Col(html.H5("Anggota Ekosistem", className="mb-0"), width=12, md=4),
                             dbc.Col([
+                                html.Label("Status BNI", className="small mb-1"),
+                                dcc.Dropdown(
+                                    id='ecosystem-member-status',
+                                    options=[
+                                        {'label': 'Semua Status BNI', 'value': 'all'},
+                                        {'label': 'Hanya Belum Nasabah (Tidak)', 'value': 'non_bni'},
+                                    ],
+                                    value='all', clearable=False,
+                                )
+                            ], width=12, md=4),
+                            dbc.Col([
+                                html.Label("Jumlah Baris", className="small mb-1"),
                                 dcc.Dropdown(
                                     id='ecosystem-member-limit',
                                     options=[{'label': 'Tampilkan 5', 'value': 5}, {'label': 'Tampilkan 10', 'value': 10},
                                              {'label': 'Tampilkan 15', 'value': 15}, {'label': 'Tampilkan Semua', 'value': -1}],
                                     value=5, clearable=False,
                                 )
-                            ], width=12, md=6),
+                            ], width=12, md=4),
                         ], className="g-2 align-items-center")
                     ]),
                     dbc.CardBody([html.Div(id='ecosystem-member-table')])
@@ -1396,31 +1566,49 @@ def analytics_layout():
                             "dan berbagi pelanggan dengan banyak merchant BNI, tapi belum menjadi nasabah.",
                             className="text-muted d-block mb-2"
                         ),
-                        dcc.Graph(figure=build_scatter_figure(), config=GRAPH_CONFIG),
-                    ])
+                        dcc.Graph(
+                            figure=build_scatter_figure(), config=GRAPH_CONFIG,
+                            responsive=True, style=ANALYTICS_GRAPH_STYLE,
+                        ),
+                    ], style={'minWidth': 0, 'overflow': 'visible'})
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
-            ], width=12, lg=6, className="mb-3"),
+            ], width=12, lg=6, className="mb-3", style={'minWidth': 0}),
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Target Akuisisi per Kota", className="mb-0")),
-                    dbc.CardBody([dcc.Graph(figure=build_target_per_kota_figure(), config=GRAPH_CONFIG)])
+                    dbc.CardBody([
+                        dcc.Graph(
+                            figure=build_target_per_kota_figure(), config=GRAPH_CONFIG,
+                            responsive=True, style=ANALYTICS_GRAPH_STYLE,
+                        )
+                    ], style={'minWidth': 0, 'overflow': 'visible'})
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
-            ], width=12, lg=6, className="mb-3"),
+            ], width=12, lg=6, className="mb-3", style={'minWidth': 0}),
         ], className="g-3"),
 
         dbc.Row([
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Komposisi Merchant per Kategori Bisnis", className="mb-0")),
-                    dbc.CardBody([dcc.Graph(figure=build_kategori_composition_figure(), config=GRAPH_CONFIG)])
+                    dbc.CardBody([
+                        dcc.Graph(
+                            figure=build_kategori_composition_figure(), config=GRAPH_CONFIG,
+                            responsive=True, style=ANALYTICS_GRAPH_STYLE,
+                        )
+                    ], style={'minWidth': 0, 'overflow': 'visible'})
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
-            ], width=12, lg=6, className="mb-3"),
+            ], width=12, lg=6, className="mb-3", style={'minWidth': 0}),
             dbc.Col([
                 dbc.Card([
                     dbc.CardHeader(html.H5("Peluang Akuisisi per Ekosistem", className="mb-0")),
-                    dbc.CardBody([dcc.Graph(figure=build_ecosystem_opportunity_figure(), config=GRAPH_CONFIG)])
+                    dbc.CardBody([
+                        dcc.Graph(
+                            figure=build_ecosystem_opportunity_figure(), config=GRAPH_CONFIG,
+                            responsive=True, style=ANALYTICS_GRAPH_STYLE,
+                        )
+                    ], style={'minWidth': 0, 'overflow': 'visible'})
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
-            ], width=12, lg=6, className="mb-3"),
+            ], width=12, lg=6, className="mb-3", style={'minWidth': 0}),
         ], className="g-3"),
 
         build_footer(),
@@ -1584,25 +1772,70 @@ def update_target_table(kategori, kota, limit):
 
 
 @app.callback(
-    Output('network-graph', 'figure'),
-    [Input('filter-kategori', 'value'),
-     Input('filter-kota', 'value')]
+    Output('network-focus-store', 'data'),
+    [Input('network-graph', 'clickData'),
+     Input('reset-network-view', 'n_clicks'),
+     Input('filter-kategori', 'value'),
+     Input('filter-kota', 'value')],
+    State('network-focus-store', 'data'),
+    prevent_initial_call=True,
 )
-def update_network_graph(kategori, kota):
-    return build_network_figure(view='all', kategori=kategori, kota=kota, height=600)
+def update_network_focus(clickData, reset_clicks, kategori, kota, current_focus):
+    trigger_id = (
+        callback_context.triggered[0]['prop_id'].split('.')[0]
+        if callback_context.triggered else None
+    )
+    if trigger_id == 'network-graph' and clickData and clickData.get('points'):
+        merchant_id = clickData['points'][0].get('customdata')
+        m_info = merchants_display[merchants_display['merchant_id'] == merchant_id]
+        if len(m_info) and m_info.iloc[0].get('is_bni_acquiring') == 'Tidak':
+            return merchant_id
+        return dash.no_update
+    if trigger_id in ('reset-network-view', 'filter-kategori', 'filter-kota'):
+        return None
+    return current_focus
+
+
+@app.callback(
+    [Output('network-graph', 'figure'),
+     Output('network-focus-controls', 'style')],
+    [Input('filter-kategori', 'value'),
+     Input('filter-kota', 'value'),
+     Input('network-focus-store', 'data')]
+)
+def update_network_graph(kategori, kota, focus_merchant_id):
+    if focus_merchant_id:
+        return (
+            build_network_figure(height=600, focus_merchant_id=focus_merchant_id),
+            {'display': 'flex', 'alignItems': 'center', 'flexWrap': 'wrap', 'gap': '0.35rem'},
+        )
+    return (
+        build_network_figure(view='all', kategori=kategori, kota=kota, height=600),
+        {'display': 'none'},
+    )
 
 
 @app.callback(
     Output('node-detail-panel', 'children'),
-    Input('network-graph', 'clickData')
+    [Input('network-graph', 'clickData'),
+     Input('reset-network-view', 'n_clicks')]
 )
-def on_node_click(clickData):
+def on_node_click(clickData, reset_clicks):
+    trigger_id = (
+        callback_context.triggered[0]['prop_id'].split('.')[0]
+        if callback_context.triggered else None
+    )
+    if trigger_id == 'reset-network-view':
+        return html.P(
+            "Klik salah satu merchant di peta untuk melihat detail.",
+            className="text-muted mb-0"
+        )
     if not clickData or 'points' not in clickData or not clickData['points']:
-        return html.P("Klik salah satu merchant di graph untuk melihat detail.", className="text-muted mb-0")
+        return html.P("Klik salah satu merchant di peta untuk melihat detail.", className="text-muted mb-0")
     point = clickData['points'][0]
     merchant_id = point.get('customdata')
     if not merchant_id:
-        return html.P("Klik salah satu merchant di graph untuk melihat detail.", className="text-muted mb-0")
+        return html.P("Klik salah satu merchant di peta untuk melihat detail.", className="text-muted mb-0")
 
     m_info = merchants_display[merchants_display['merchant_id'] == merchant_id]
     if len(m_info) == 0:
@@ -1612,7 +1845,6 @@ def on_node_click(clickData):
     degree = int(row.get('degree', 0))
     bni_ratio = row.get('connected_bni_ratio', 0)
     bni_partners = int(degree * bni_ratio)
-    produk = get_produk_rekomendasi(row)
     comm = int(row.get('community_id', -1))
 
     detail_children = [
@@ -1623,11 +1855,14 @@ def on_node_click(clickData):
         html.Small(f"{int(row.get('n_customers', 0))} pelanggan unik di merchant ini · "
                    f"rata-rata kesamaan pelanggan {row.get('avg_neighbor_jaccard', 0):.1%}",
                    className="text-muted d-block"),
-        html.Small(f"Rekomendasi produk: {produk}", className="text-primary d-block"),
     ]
     if row.get('is_bni_acquiring') == 'Tidak':
         e = get_merchant_economics(row)
         detail_children.extend([
+            html.Small(
+                f"Rekomendasi produk: {get_produk_rekomendasi(row)}",
+                className="text-primary d-block"
+            ),
             html.Hr(className="my-2"),
             html.Small(f"Fee-Based Income Bersih (85% MDR): {format_rupiah_short(e['net_fbi'])}/bulan", className="text-success d-block fw-bold"),
             html.Small(f"Asumsi biaya produk: {format_rupiah_short(e['product_cost'])}/bulan", className="text-muted d-block"),
@@ -1707,24 +1942,52 @@ def handle_chat(send_clicks, example_clicks, user_input, chat_history):
 # CALLBACKS — DETAIL EKOSISTEM PAGE
 # ============================================================
 @app.callback(
+    Output('ecosystem-focus-store', 'data'),
+    [Input('ecosystem-mini-graph', 'clickData'),
+     Input('reset-ecosystem-network', 'n_clicks'),
+     Input('ecosystem-selector', 'value')],
+    State('ecosystem-focus-store', 'data'),
+    prevent_initial_call=True,
+)
+def update_ecosystem_focus(clickData, reset_clicks, community_id, current_focus):
+    trigger_id = (
+        callback_context.triggered[0]['prop_id'].split('.')[0]
+        if callback_context.triggered else None
+    )
+    if trigger_id == 'ecosystem-mini-graph' and clickData and clickData.get('points'):
+        merchant_id = clickData['points'][0].get('customdata')
+        m_info = merchants_display[merchants_display['merchant_id'] == merchant_id]
+        if len(m_info) and m_info.iloc[0].get('is_bni_acquiring') == 'Tidak':
+            return merchant_id
+        return dash.no_update
+    if trigger_id in ('reset-ecosystem-network', 'ecosystem-selector'):
+        return None
+    return current_focus
+
+
+@app.callback(
     [Output('ecosystem-summary-cards', 'children'),
      Output('ecosystem-mini-graph', 'figure'),
-     Output('ecosystem-narrative', 'children')],
-    Input('ecosystem-selector', 'value')
+     Output('ecosystem-narrative', 'children'),
+     Output('ecosystem-focus-controls', 'style')],
+    [Input('ecosystem-selector', 'value'),
+     Input('ecosystem-focus-store', 'data')]
 )
-def update_ecosystem_detail(community_id):
+def update_ecosystem_detail(community_id, focus_merchant_id):
     if community_id is None:
-        return "", go.Figure(), ""
+        return "", go.Figure(), "", {'display': 'none'}
 
     summary_row = ecosystem_summary[ecosystem_summary['community_id'] == community_id]
     if len(summary_row) == 0:
-        return dbc.Alert("Data ekosistem tidak ditemukan.", color="warning"), go.Figure(), ""
+        return (dbc.Alert("Data ekosistem tidak ditemukan.", color="warning"),
+                go.Figure(), "", {'display': 'none'})
 
     summary_row = summary_row.iloc[0]
     community_ids = summary_row['community_ids']
     members_df = merchants_display[merchants_display['community_id'].isin(community_ids)].copy()
     if len(members_df) == 0:
-        return dbc.Alert("Data ekosistem tidak ditemukan.", color="warning"), go.Figure(), ""
+        return (dbc.Alert("Data ekosistem tidak ditemukan.", color="warning"),
+                go.Figure(), "", {'display': 'none'})
 
     size = int(summary_row['size'])
     bni_pct = summary_row['bni_pct']
@@ -1747,7 +2010,23 @@ def update_ecosystem_detail(community_id):
                           subtext="merchant non-BNI"), xs=6, md=4, lg=2),
     ], className="g-3")
 
-    mini_fig = build_network_figure(view=community_ids, height=380)
+    if focus_merchant_id:
+        mini_fig = build_network_figure(
+            height=520,
+            focus_merchant_id=focus_merchant_id,
+            flexible_navigation=True,
+        )
+        focus_controls_style = {
+            'display': 'flex', 'alignItems': 'center',
+            'flexWrap': 'wrap', 'gap': '0.35rem',
+        }
+    else:
+        mini_fig = build_network_figure(
+            view=community_ids,
+            height=520,
+            flexible_navigation=True,
+        )
+        focus_controls_style = {'display': 'none'}
 
     non_bni_members = members_df[members_df['is_bni_acquiring'] == 'Tidak']
     hub_candidates = non_bni_members.nlargest(3, 'degree')
@@ -1779,22 +2058,25 @@ def update_ecosystem_detail(community_id):
         )
     ])
 
-    return cards, mini_fig, narrative
+    return cards, mini_fig, narrative, focus_controls_style
 
 
 @app.callback(
     Output('ecosystem-member-table', 'children'),
     [Input('ecosystem-selector', 'value'),
-     Input('ecosystem-member-limit', 'value')]
+     Input('ecosystem-member-limit', 'value'),
+     Input('ecosystem-member-status', 'value')]
 )
-def update_ecosystem_member_table(community_id, limit):
+def update_ecosystem_member_table(community_id, limit, status_filter):
     if community_id is None:
         return ""
     summary_row = ecosystem_summary[ecosystem_summary['community_id'] == community_id]
     community_ids = summary_row.iloc[0]['community_ids'] if len(summary_row) > 0 else [community_id]
     members_df = merchants_display[merchants_display['community_id'].isin(community_ids)].copy()
+    if status_filter == 'non_bni':
+        members_df = members_df[members_df['is_bni_acquiring'] == 'Tidak']
     if len(members_df) == 0:
-        return html.P("Tidak ada anggota.", className="text-muted")
+        return html.P("Tidak ada anggota yang sesuai filter.", className="text-muted")
 
     members_sorted = members_df.sort_values('priority_probability', ascending=False)
     if limit != -1:
