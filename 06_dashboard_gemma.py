@@ -138,63 +138,86 @@ else:
     ].apply(_infer_skala_usaha)
 
 
-# QRIS mengikuti ketentuan BI yang efektif sejak 15 Maret 2025:
-# UMI <= Rp500 ribu: 0%; UMI > Rp500 ribu: 0,3%; UKE/UME/UBE: 0,7%.
-# EDC memakai asumsi bisnis eksplisit per instrumen pembayaran. Debit GPN on-us
-# dan off-us mengikuti skema 0,15% dan 1%; kartu kredit memakai asumsi 2%.
-EDC_MDR_RATES = {
-    'debit': 0.0015,
-    'credit_card': 0.02*0.85,
-}
+# ============================================================
+# ECONOMIC LAYER — AFTER PRODUCT RECOMMENDATION
+# ============================================================
+# Gross MDR dihitung dari observed C2M transaction amount, bukan omzet merchant.
+# Net fee-based income (FBI) = 85% × Gross MDR.
+# Seluruh payment_type='debit' pada synthetic data diasumsikan debit BNI/on-us (MDR 0,15%).
+NET_FBI_SHARE = 0.85
+QRIS_MONTHLY_COST = 50_000
+EDC_MONTHLY_COST = 200_000
+MDR_QRIS_UMI_HIGH = 0.003
+MDR_QRIS_REGULAR = 0.007
+MDR_EDC_DEBIT = 0.0015
+MDR_EDC_CREDIT = 0.02
 
 
-def _build_observed_mdr_profile():
-    """Hitung effective MDR yield per merchant dari mix transaksi synthetic."""
+def _load_or_build_mdr_profile():
+    """Source of truth MDR/FBI per merchant. Prefer artifact notebook 01; fallback ke raw."""
+    profile_path = f'{PROJECT_ROOT}/data/processed/merchant_mdr_profile.csv'
+    if os.path.exists(profile_path):
+        return pd.read_csv(profile_path)
+
     trx_path = f'{PROJECT_ROOT}/data/raw/transactions_raw.csv'
-    if not os.path.exists(trx_path):
-        return pd.DataFrame()
-
-    usecols = ['source_id', 'target_id', 'amount', 'channel', 'payment_type', 'status']
-    trx = pd.read_csv(trx_path, usecols=usecols)
+    trx = pd.read_csv(trx_path)
+    trx = trx.drop_duplicates(subset='ref_number', keep='first')
     trx['amount'] = pd.to_numeric(trx['amount'], errors='coerce')
     trx = trx[
         trx['source_id'].astype(str).str.startswith('C')
         & trx['status'].eq('success')
         & trx['amount'].gt(0)
     ].copy()
-    if trx.empty:
-        return pd.DataFrame()
-
+    trx['timestamp_dt'] = pd.to_datetime(trx['timestamp'])
     scale_map = merchants_display.set_index('merchant_id')['skala_usaha']
-    trx['skala_usaha'] = trx['target_id'].map(scale_map).fillna('UKE')
+    trx['skala_usaha'] = trx['target_id'].map(scale_map)
+
     qris_rate = np.where(
-        trx['skala_usaha'].eq('UMI'),
-        np.where(trx['amount'].le(500_000), 0.0, 0.003*0.85),
-        0.007*0.85,
-    )
-    trx['qris_fee'] = np.where(trx['channel'].eq('QRIS'), trx['amount'] * qris_rate, 0.0)
-    trx['edc_fee'] = np.where(
-        trx['channel'].eq('EDC'),
-        trx['amount'] * trx['payment_type'].map(EDC_MDR_RATES).fillna(0.01),
+        trx['payment_type'].eq('QRIS'),
+        np.where(
+            trx['skala_usaha'].eq('UMI'),
+            np.where(trx['amount'].le(500_000), 0.0, MDR_QRIS_UMI_HIGH),
+            MDR_QRIS_REGULAR,
+        ),
         0.0,
     )
-    profile = trx.groupby('target_id').agg(
-        observed_amount=('amount', 'sum'),
-        observed_qris_fee=('qris_fee', 'sum'),
-        observed_edc_fee=('edc_fee', 'sum'),
+    edc_rate = np.select(
+        [trx['payment_type'].eq('debit'), trx['payment_type'].eq('credit_card')],
+        [MDR_EDC_DEBIT, MDR_EDC_CREDIT], default=0.0,
     )
-    profile['qris_yield'] = profile['observed_qris_fee'] / profile['observed_amount']
-    profile['edc_yield'] = profile['observed_edc_fee'] / profile['observed_amount']
-    return profile
+    trx['gross_qris_mdr'] = trx['amount'] * qris_rate
+    trx['gross_edc_mdr'] = trx['amount'] * edc_rate
+
+    start_m = trx['timestamp_dt'].min().to_period('M')
+    end_m = trx['timestamp_dt'].max().to_period('M')
+    months = (end_m.year-start_m.year)*12 + (end_m.month-start_m.month) + 1
+    g = trx.groupby('target_id').agg(
+        gross_qris_mdr_period=('gross_qris_mdr','sum'),
+        gross_edc_mdr_period=('gross_edc_mdr','sum'),
+    ).reset_index().rename(columns={'target_id':'merchant_id'})
+    g['observation_months'] = months
+    g['monthly_gross_qris_mdr'] = g['gross_qris_mdr_period'] / months
+    g['monthly_gross_edc_mdr'] = g['gross_edc_mdr_period'] / months
+    g['monthly_net_qris_fbi'] = g['monthly_gross_qris_mdr'] * NET_FBI_SHARE
+    g['monthly_net_edc_fbi'] = g['monthly_gross_edc_mdr'] * NET_FBI_SHARE
+    g['monthly_net_total_fbi'] = g['monthly_net_qris_fbi'] + g['monthly_net_edc_fbi']
+    return g
 
 
-OBSERVED_MDR_PROFILE = _build_observed_mdr_profile()
+mdr_profile = _load_or_build_mdr_profile()
+_econ_cols = [c for c in mdr_profile.columns if c != 'merchant_id']
+merchants_display = merchants_display.drop(columns=[c for c in _econ_cols if c in merchants_display.columns], errors='ignore')
+merchants_display = merchants_display.merge(mdr_profile, on='merchant_id', how='left', validate='one_to_one')
+for col in _econ_cols:
+    if col in merchants_display.columns and col != 'observation_months':
+        merchants_display[col] = pd.to_numeric(merchants_display[col], errors='coerce').fillna(0.0)
 
 PR_Q75 = merchants_display['pagerank'].quantile(0.75)
 PR_Q40 = merchants_display['pagerank'].quantile(0.40)
 GRAPH_COVERAGE = int((merchants_display['degree'] > 0).sum())
 PRODUCT_MODEL_AUC = float(
-    product_model_metadata.get('test_metrics', {}).get('auc_roc', 0)
+    product_model_metadata.get('test_metrics', {}).get('roc_auc',
+    product_model_metadata.get('test_metrics', {}).get('auc_roc', 0))
 )
 PRODUCT_MODEL_EXPERIMENTAL = PRODUCT_MODEL_AUC < 0.65
 
@@ -204,19 +227,18 @@ PRODUCT_MODEL_EXPERIMENTAL = PRODUCT_MODEL_AUC < 0.65
 def format_rupiah_short(value):
     """Format angka rupiah jadi ringkas: Rp 31,1 Jt / Rp 1,2 M / Rp 850 Rb"""
     value = value or 0
+    sign = '-' if value < 0 else ''
+    value = abs(value)
     if value >= 1e9:
-        s = f"{value/1e9:.1f}".replace('.', ',')
-        return f"Rp {s} M"
-    elif value >= 1e6:
-        s = f"{value/1e6:.1f}".replace('.', ',')
-        return f"Rp {s} Jt"
-    elif value >= 1e3:
-        return f"Rp {value/1e3:.0f} Rb"
-    return f"Rp {value:.0f}"
+        return f"{sign}Rp {value/1e9:.1f} M".replace('.', ',')
+    if value >= 1e6:
+        return f"{sign}Rp {value/1e6:.1f} Jt".replace('.', ',')
+    if value >= 1e3:
+        return f"{sign}Rp {value/1e3:.0f} Rb"
+    return f"{sign}Rp {value:.0f}"
 
 
 def priority_badge(score):
-    """Ganti angka priority_probability jadi badge kualitatif untuk RM."""
     if score >= 0.7:
         return ("Prioritas Tinggi", "danger")
     elif score >= 0.4:
@@ -225,7 +247,6 @@ def priority_badge(score):
 
 
 def influence_badge(pr_value):
-    """Ganti angka pagerank mentah jadi badge tingkat pengaruh di jaringan."""
     if pr_value >= PR_Q75:
         return ("Tinggi", "success")
     elif pr_value >= PR_Q40:
@@ -234,48 +255,70 @@ def influence_badge(pr_value):
 
 
 def get_produk_rekomendasi(row):
-    """Tampilkan rekomendasi model beserta confidence untuk kelas terpilih."""
     recommendation = row.get('product_recommendation', 'QRIS') or 'QRIS'
     proba_edc = float(row.get('product_rec_proba_edc', 0.5) or 0.5)
     confidence = proba_edc if recommendation == 'QRIS + EDC' else 1 - proba_edc
     return f"{recommendation} ({confidence:.0%})"
 
 
+def get_merchant_economics(row):
+    """Final economics setelah rekomendasi produk. Hanya actionable untuk merchant non-BNI."""
+    qris_fbi = float(row.get('monthly_net_qris_fbi', 0) or 0)
+    edc_fbi = float(row.get('monthly_net_edc_fbi', 0) or 0)
+    qris_gross = float(row.get('monthly_gross_qris_mdr', 0) or 0)
+    edc_gross = float(row.get('monthly_gross_edc_mdr', 0) or 0)
+    p_edc = min(max(float(row.get('product_rec_proba_edc', 0.5) or 0.5), 0.0), 1.0)
+    recommendation = str(row.get('product_recommendation', 'QRIS') or 'QRIS')
+
+    if recommendation == 'QRIS + EDC':
+        gross_mdr = qris_gross + edc_gross
+        net_fbi = qris_fbi + edc_fbi
+        product_cost = QRIS_MONTHLY_COST + EDC_MONTHLY_COST
+        risk_label = 'Risiko biaya EDC tidak produktif'
+        expected_risk = (1 - p_edc) * EDC_MONTHLY_COST
+    else:
+        gross_mdr = qris_gross
+        net_fbi = qris_fbi
+        product_cost = QRIS_MONTHLY_COST
+        risk_label = 'Potensi kontribusi EDC yang terlewat'
+        expected_risk = p_edc * max(edc_fbi - EDC_MONTHLY_COST, 0.0)
+
+    return {
+        'gross_mdr': gross_mdr,
+        'net_fbi': net_fbi,
+        'product_cost': product_cost,
+        'contribution': net_fbi - product_cost,
+        'risk_label': risk_label,
+        'expected_risk': expected_risk,
+        'p_edc': p_edc,
+    }
+
+
 def get_est_fee(row):
-    """Estimasi MDR dari omzet, rekomendasi produk, serta mix pembayaran."""
-    monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
-    if monthly_omzet <= 0:
+    """Compatibility helper: monthly net FBI sesuai product recommendation."""
+    if row.get('is_bni_acquiring') != 'Tidak':
         return 0.0
-
-    merchant_id = row.get('merchant_id')
-    recommendation = str(row.get('product_recommendation', 'QRIS') or 'QRIS').upper()
-    if merchant_id in OBSERVED_MDR_PROFILE.index:
-        payment_mix = OBSERVED_MDR_PROFILE.loc[merchant_id]
-        effective_yield = float(payment_mix['qris_yield'])
-        if 'EDC' in recommendation:
-            effective_yield += float(payment_mix['edc_yield'])
-        return monthly_omzet * effective_yield
-
-    # Fallback hanya dipakai jika merchant belum memiliki observasi C2M.
-    scale = row.get('skala_usaha') or _infer_skala_usaha(monthly_omzet)
-    qris_rate = 0.0009 if scale == 'UMI' else 0.006
-    qris_share = 0.65 if scale == 'UMI' else 0.45
-    effective_yield = qris_share * qris_rate
-    if 'EDC' in recommendation:
-        blended_edc_rate = (
-            0.72 * EDC_MDR_RATES['debit']
-            + 0.28 * EDC_MDR_RATES['credit_card']
-        )
-        effective_yield += 0.35 * blended_edc_rate
-    return monthly_omzet * effective_yield
+    return get_merchant_economics(row)['net_fbi']
 
 
-def fee_display_text(row, prefix="Est. FBI: "):
-    monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
-    if monthly_omzet <= 0:
-        return "Belum ada data omzet"
-    return f"{prefix}{format_rupiah_short(get_est_fee(row))}/bulan"
+def fee_display_text(row, prefix="Est. FBI Bersih: "):
+    if row.get('is_bni_acquiring') != 'Tidak':
+        return "-"
+    return f"{prefix}{format_rupiah_short(get_merchant_economics(row)['net_fbi'])}/bulan"
 
+
+def economic_hover_text(row):
+    if row.get('is_bni_acquiring') != 'Tidak':
+        return ''
+    e = get_merchant_economics(row)
+    return (
+        f"<br><b>Economic opportunity</b><br>"
+        f"Gross MDR: {format_rupiah_short(e['gross_mdr'])}/bulan<br>"
+        f"Fee-Based Income Bersih (85% MDR): {format_rupiah_short(e['net_fbi'])}/bulan<br>"
+        f"Asumsi biaya produk: {format_rupiah_short(e['product_cost'])}/bulan<br>"
+        f"Estimasi kontribusi: {format_rupiah_short(e['contribution'])}/bulan<br>"
+        f"{e['risk_label']}: {format_rupiah_short(e['expected_risk'])}/bulan"
+    )
 
 def filter_non_bni_targets(kategori=None, kota=None):
     df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
@@ -521,6 +564,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
             f"Rata-rata kesamaan pelanggan: {row.get('avg_neighbor_jaccard', 0):.1%}<br>"
             f"Rekomendasi produk: {get_produk_rekomendasi(row)}<br>"
             f"Ekosistem bisnis: {get_ecosystem_label(int(comm)) if comm != -1 else 'Belum terklasifikasi'}"
+            + economic_hover_text(row)
         )
         node_text.append(hover)
 
@@ -719,6 +763,15 @@ def build_scatter_figure():
     return apply_chart_theme(fig)
 
 
+
+
+def build_target_per_kota_figure():
+    df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
+    grouped = df.groupby('kota').size().reset_index(name='target_count').sort_values('target_count', ascending=False)
+    fig = go.Figure(go.Bar(x=grouped['kota'], y=grouped['target_count'], text=grouped['target_count'], textposition='outside'))
+    fig.update_layout(yaxis_title='Jumlah target non-BNI', xaxis_title=None)
+    return apply_chart_theme(fig)
+
 def build_fee_per_kota_figure():
     """Potensi MDR per kota berdasarkan omzet bulanan merchant non-BNI."""
     df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
@@ -804,7 +857,7 @@ def run_agent_simple(user_message):
                 "type": "function",
                 "function": {
                     "name": "calculate_acquisition_impact",
-                    "description": "Estimasi potensi MDR dan rekomendasi produk ML untuk akuisisi merchant",
+                    "description": "Economics per merchant non-BNI setelah rekomendasi produk: Gross MDR, FBI bersih 85%, biaya, kontribusi, dan expected risk",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -870,19 +923,26 @@ def run_agent_simple(user_message):
 
         def _calculate_acquisition_impact(merchant_id):
             info = merchants_display[merchants_display['merchant_id'] == merchant_id]
-            if len(info) == 0: return json.dumps({"error": "Not found"})
+            if len(info) == 0:
+                return json.dumps({"error": "Not found"})
             row = info.iloc[0]
-            monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
-            fee = get_est_fee(row)
+            if row.get('is_bni_acquiring') != 'Tidak':
+                return json.dumps({"error": "Economic acquisition view hanya untuk merchant non-BNI"})
+            e = get_merchant_economics(row)
             return json.dumps({
                 "merchant_id": merchant_id,
-                "monthly_omzet": monthly_omzet,
-                "est_monthly_fee": float(fee),
-                "est_annual_fee": float(fee * 12),
+                "nama": row.get('nama',''),
                 "rekomendasi_produk": get_produk_rekomendasi(row),
-                "recommendation_source": "product_rec_model",
+                "gross_mdr_per_bulan": float(e['gross_mdr']),
+                "fee_based_income_bersih_per_bulan": float(e['net_fbi']),
+                "biaya_produk_per_bulan": float(e['product_cost']),
+                "estimasi_kontribusi_per_bulan": float(e['contribution']),
+                "economic_risk_label": e['risk_label'],
+                "expected_economic_risk_per_bulan": float(e['expected_risk']),
+                "edc_suitability": float(e['p_edc']),
                 "affinity_neighbors": int(row.get('degree', 0)),
                 "connected_bni_ratio": float(row.get('connected_bni_ratio', 0)),
+                "catatan": "Actual class belum diketahui; expected risk bukan label FP/FN aktual."
             }, ensure_ascii=False, default=str)
 
         def _get_overview_stats():
@@ -918,13 +978,13 @@ def run_agent_simple(user_message):
             "get_overview_stats": _get_overview_stats,
         }
 
-        system = ("Kamu adalah AI assistant untuk tim Sales & Merchant Acquisition di Bank BNI. "
-                  "Gunakan tools untuk menjawab. Jawab dalam Bahasa Indonesia yang profesional. "
-                  "Sertakan angka konkret dan gunakan rekomendasi produk dari model ML. "
+        system = ("Kamu adalah AI assistant untuk RM Merchant Acquisition BNI. "
+                  "Gunakan tools dan jangan mengarang data. Fokus economics hanya pada merchant non-BNI. "
+                  "Gross MDR berasal dari observed transaction amount; Fee-Based Income Bersih = 85% × Gross MDR. "
+                  "Gunakan bahasa bisnis: Estimasi Kontribusi, Risiko Biaya EDC Tidak Produktif, atau Potensi Kontribusi EDC yang Terlewat. "
+                  "Jangan menyebut merchant non-BNI sebagai FP/FN karena actual class belum diketahui. "
                   "Graph menunjukkan kesamaan pelanggan antarmerchant, bukan transfer dana langsung. "
-                  "JANGAN gunakan istilah teknis seperti 'supplier', 'retailer', 'node', 'edge', 'hub', "
-                  "'centrality', 'pagerank', atau 'jaccard' — gunakan bahasa bisnis seperti "
-                  "'merchant dengan pelanggan serupa', 'tingkat kesamaan pelanggan', dan 'tingkat pengaruh'.")
+                  "Hindari istilah teknis node/edge/centrality/pagerank/jaccard; gunakan bahasa RM.")
 
         messages = [
             {"role": "system", "content": system},
@@ -1019,7 +1079,7 @@ high_priority = (merchants_display['predicted_priority'] == 1).sum()
 # Potensi MDR bulanan: omzet merchant prioritas tinggi × effective MDR yield
 # sesuai rekomendasi produk, skala QRIS, dan mix instrumen EDC.
 top_priority_df = merchants_display[merchants_display['predicted_priority'] == 1]
-potential_fee_income = top_priority_df.apply(get_est_fee, axis=1).sum() if len(top_priority_df) else 0
+edc_target_count = ((merchants_display['is_bni_acquiring'] == 'Tidak') & (merchants_display['product_recommendation'] == 'QRIS + EDC')).sum()
 
 model_f1 = product_model_metadata.get('test_metrics', {}).get('f1', 0)
 model_auc = product_model_metadata.get('test_metrics', {}).get('auc_roc', 0)
@@ -1100,12 +1160,12 @@ def build_chat_empty_state():
     ], className="chat-empty-state")
 
 
-def quick_summary_panel(n_filtered, n_target, n_priority, fee):
+def quick_summary_panel(n_filtered, n_target, n_priority, n_edc):
     return dbc.Row([
         dbc.Col(mini_stat("Merchant Tercakup", f"{n_filtered}"), width=6),
         dbc.Col(mini_stat("Target Akuisisi", f"{n_target}", "text-danger"), width=6),
         dbc.Col(mini_stat("Prioritas Tinggi", f"{n_priority}", "text-warning"), width=6),
-        dbc.Col(mini_stat("Estimasi FBI", format_rupiah_short(fee), "text-primary"), width=6),
+        dbc.Col(mini_stat("Rekomendasi QRIS+EDC", f"{n_edc}", "text-primary"), width=6),
     ], className="quick-summary-grid")
 
 
@@ -1130,8 +1190,8 @@ def overview_layout():
                               subtext="peluang akuisisi"), width=6, md=4, lg=2),
             dbc.Col(kpi_card("Prioritas Tinggi", f"{high_priority}", value_color="text-warning",
                               subtext="siap digarap"), width=6, md=4, lg=2),
-            dbc.Col(kpi_card("Potensi FBI", format_rupiah_short(potential_fee_income),
-                              value_color="text-primary", subtext="estimasi dari volume transaksi merchant"), width=6, md=4, lg=2),
+            dbc.Col(kpi_card("Rekomendasi QRIS + EDC", f"{edc_target_count}",
+                              value_color="text-primary", subtext="target non-BNI"), width=6, md=4, lg=2),
             dbc.Col(kpi_card("Ekosistem Teridentifikasi", f"{n_communities}", value_color="text-primary",
                               subtext="klik untuk detail →", link_href="/ekosistem"), width=6, md=4, lg=2),
         ], className="mb-3 g-3"),
@@ -1342,8 +1402,8 @@ def analytics_layout():
             ], width=12, lg=6, className="mb-3"),
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Potensi FBI per Kota", className="mb-0")),
-                    dbc.CardBody([dcc.Graph(figure=build_fee_per_kota_figure(), config=GRAPH_CONFIG)])
+                    dbc.CardHeader(html.H5("Target Akuisisi per Kota", className="mb-0")),
+                    dbc.CardBody([dcc.Graph(figure=build_target_per_kota_figure(), config=GRAPH_CONFIG)])
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
             ], width=12, lg=6, className="mb-3"),
         ], className="g-3"),
@@ -1446,9 +1506,10 @@ def update_target_table(kategori, kota, limit):
     n_filtered = len(filtered_all)
     n_target = len(filtered_all[filtered_all['is_bni_acquiring'] == 'Tidak'])
     filtered_priority_df = filtered_all[filtered_all['predicted_priority'] == 1]
-    filtered_fee = filtered_priority_df.apply(get_est_fee, axis=1).sum() if len(filtered_priority_df) else 0
+    filtered_targets = filtered_all[filtered_all['is_bni_acquiring'] == 'Tidak']
+    filtered_edc = (filtered_targets['product_recommendation'] == 'QRIS + EDC').sum()
 
-    summary_panel = quick_summary_panel(n_filtered, n_target, len(filtered_priority_df), filtered_fee)
+    summary_panel = quick_summary_panel(n_filtered, n_target, len(filtered_priority_df), filtered_edc)
 
     # Pesan kontekstual saat filter menghasilkan target lemah
     n_high = (df_all_targets['priority_probability'] >= 0.7).sum()
@@ -1496,8 +1557,10 @@ def update_target_table(kategori, kota, limit):
                                className="text-muted d-block"),
                     html.Small(f"{degree} merchant dengan pelanggan serupa ({bni_partners} sudah BNI)",
                                className="text-muted d-block"),
-                    html.Small(fee_display_text(row), className="text-success d-block fw-bold"),
                     html.Small(f"Rekomendasi produk: {produk}", className="text-primary d-block"),
+                    html.Small(f"FBI Bersih: {format_rupiah_short(get_merchant_economics(row)['net_fbi'])}/bulan", className="text-success d-block fw-bold"),
+                    html.Small(f"Estimasi kontribusi: {format_rupiah_short(get_merchant_economics(row)['contribution'])}/bulan", className="text-primary d-block"),
+                    html.Small(f"{get_merchant_economics(row)['risk_label']}: {format_rupiah_short(get_merchant_economics(row)['expected_risk'])}/bulan", className="text-warning d-block"),
                     html.Hr(className="my-1"),
                 ], className="target-row target-row--priority")
             )
@@ -1560,9 +1623,17 @@ def on_node_click(clickData):
         html.Small(f"{int(row.get('n_customers', 0))} pelanggan unik di merchant ini · "
                    f"rata-rata kesamaan pelanggan {row.get('avg_neighbor_jaccard', 0):.1%}",
                    className="text-muted d-block"),
-        html.Small(fee_display_text(row), className="text-success d-block fw-bold"),
         html.Small(f"Rekomendasi produk: {produk}", className="text-primary d-block"),
     ]
+    if row.get('is_bni_acquiring') == 'Tidak':
+        e = get_merchant_economics(row)
+        detail_children.extend([
+            html.Hr(className="my-2"),
+            html.Small(f"Fee-Based Income Bersih (85% MDR): {format_rupiah_short(e['net_fbi'])}/bulan", className="text-success d-block fw-bold"),
+            html.Small(f"Asumsi biaya produk: {format_rupiah_short(e['product_cost'])}/bulan", className="text-muted d-block"),
+            html.Small(f"Estimasi kontribusi: {format_rupiah_short(e['contribution'])}/bulan", className="text-primary d-block fw-bold"),
+            html.Small(f"{e['risk_label']}: {format_rupiah_short(e['expected_risk'])}/bulan", className="text-warning d-block"),
+        ])
     if comm != -1:
         detail_children.append(
             dcc.Link(
@@ -1660,7 +1731,6 @@ def update_ecosystem_detail(community_id):
     avg_connections = summary_row['avg_connections']
     unique_customers = int(summary_row['unique_customers'])
     total_monthly_omzet = summary_row['total_monthly_omzet']
-    potential_fee = summary_row['potential_fee']
     label = summary_row['label']
 
     cards = dbc.Row([
@@ -1673,8 +1743,8 @@ def update_ecosystem_detail(community_id):
                           subtext="pelanggan unik ekosistem"), xs=6, md=4, lg=2),
         dbc.Col(kpi_card("Omzet Bulanan", format_rupiah_short(total_monthly_omzet), value_color="text-primary",
                           subtext="estimasi seluruh merchant"), xs=6, md=4, lg=2),
-        dbc.Col(kpi_card("Potensi FBI Tambahan", format_rupiah_short(potential_fee), value_color="text-warning",
-                          subtext="jika non-BNI diakuisisi/bln"), xs=6, md=4, lg=2),
+        dbc.Col(kpi_card("Target Akuisisi", f"{int(summary_row['non_bni_count'])}", value_color="text-warning",
+                          subtext="merchant non-BNI"), xs=6, md=4, lg=2),
     ], className="g-3")
 
     mini_fig = build_network_figure(view=community_ids, height=380)
@@ -1695,11 +1765,6 @@ def update_ecosystem_detail(community_id):
     else:
         narrative_parts.append("Tidak ada merchant berpengaruh tinggi non-BNI yang menonjol di ekosistem ini saat ini.")
 
-    if potential_fee > 0:
-        narrative_parts.append(
-            f"Estimasi potensi FBI tambahan: {format_rupiah_short(potential_fee)}/bulan "
-            f"jika seluruh merchant non-BNI di ekosistem ini diakuisisi."
-        )
 
     recommendation_counts = non_bni_members['product_recommendation'].value_counts().to_dict()
     recommendation_summary = ", ".join(
