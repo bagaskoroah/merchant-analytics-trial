@@ -105,6 +105,92 @@ merchants_display['product_recommendation'] = merchants_display[
     'product_recommendation'
 ].fillna('QRIS')
 
+# skala_usaha berasal dari raw merchant terbaru. Fallback berbasis omzet menjaga
+# dashboard tetap dapat dibuka sebelum seluruh notebook downstream dijalankan ulang.
+_RAW_MERCHANTS_PATH = f'{PROJECT_ROOT}/data/raw/merchants.csv'
+if 'skala_usaha' not in merchants_display.columns and os.path.exists(_RAW_MERCHANTS_PATH):
+    raw_scale = pd.read_csv(_RAW_MERCHANTS_PATH, usecols=['merchant_id', 'skala_usaha'])
+    merchants_display = merchants_display.merge(
+        raw_scale, on='merchant_id', how='left', validate='one_to_one'
+    )
+
+
+def _infer_skala_usaha(monthly_omzet):
+    """Klasifikasi omzet bulanan dari batas omzet tahunan PP 7/2021."""
+    monthly_omzet = float(monthly_omzet or 0)
+    if monthly_omzet <= 2_000_000_000 / 12:
+        return 'UMI'
+    if monthly_omzet <= 15_000_000_000 / 12:
+        return 'UKE'
+    if monthly_omzet <= 50_000_000_000 / 12:
+        return 'UME'
+    return 'UBE'
+
+
+if 'skala_usaha' not in merchants_display.columns:
+    merchants_display['skala_usaha'] = merchants_display['avg_omzet_bulanan'].apply(
+        _infer_skala_usaha
+    )
+else:
+    missing_scale = merchants_display['skala_usaha'].isna()
+    merchants_display.loc[missing_scale, 'skala_usaha'] = merchants_display.loc[
+        missing_scale, 'avg_omzet_bulanan'
+    ].apply(_infer_skala_usaha)
+
+
+# QRIS mengikuti ketentuan BI yang efektif sejak 15 Maret 2025:
+# UMI <= Rp500 ribu: 0%; UMI > Rp500 ribu: 0,3%; UKE/UME/UBE: 0,7%.
+# EDC memakai asumsi bisnis eksplisit per instrumen pembayaran. Debit GPN on-us
+# dan off-us mengikuti skema 0,15% dan 1%; kartu kredit memakai asumsi 2%.
+EDC_MDR_RATES = {
+    'debit_on_us': 0.0015,
+    'debit_off_us': 0.0100,
+    'credit_card': 0.0200,
+}
+
+
+def _build_observed_mdr_profile():
+    """Hitung effective MDR yield per merchant dari mix transaksi synthetic."""
+    trx_path = f'{PROJECT_ROOT}/data/raw/transactions_raw.csv'
+    if not os.path.exists(trx_path):
+        return pd.DataFrame()
+
+    usecols = ['source_id', 'target_id', 'amount', 'channel', 'payment_type', 'status']
+    trx = pd.read_csv(trx_path, usecols=usecols)
+    trx['amount'] = pd.to_numeric(trx['amount'], errors='coerce')
+    trx = trx[
+        trx['source_id'].astype(str).str.startswith('C')
+        & trx['status'].eq('success')
+        & trx['amount'].gt(0)
+    ].copy()
+    if trx.empty:
+        return pd.DataFrame()
+
+    scale_map = merchants_display.set_index('merchant_id')['skala_usaha']
+    trx['skala_usaha'] = trx['target_id'].map(scale_map).fillna('UKE')
+    qris_rate = np.where(
+        trx['skala_usaha'].eq('UMI'),
+        np.where(trx['amount'].le(500_000), 0.0, 0.003),
+        0.007,
+    )
+    trx['qris_fee'] = np.where(trx['channel'].eq('QRIS'), trx['amount'] * qris_rate, 0.0)
+    trx['edc_fee'] = np.where(
+        trx['channel'].eq('EDC'),
+        trx['amount'] * trx['payment_type'].map(EDC_MDR_RATES).fillna(0.01),
+        0.0,
+    )
+    profile = trx.groupby('target_id').agg(
+        observed_amount=('amount', 'sum'),
+        observed_qris_fee=('qris_fee', 'sum'),
+        observed_edc_fee=('edc_fee', 'sum'),
+    )
+    profile['qris_yield'] = profile['observed_qris_fee'] / profile['observed_amount']
+    profile['edc_yield'] = profile['observed_edc_fee'] / profile['observed_amount']
+    return profile
+
+
+OBSERVED_MDR_PROFILE = _build_observed_mdr_profile()
+
 PR_Q75 = merchants_display['pagerank'].quantile(0.75)
 PR_Q40 = merchants_display['pagerank'].quantile(0.40)
 GRAPH_COVERAGE = int((merchants_display['degree'] > 0).sum())
@@ -157,9 +243,33 @@ def get_produk_rekomendasi(row):
 
 
 def get_est_fee(row):
-    """Estimasi potensi MDR bulanan dari omzet bulanan merchant."""
+    """Estimasi MDR dari omzet, rekomendasi produk, serta mix pembayaran."""
     monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
-    return monthly_omzet * 0.007  # asumsi MDR 0,7%
+    if monthly_omzet <= 0:
+        return 0.0
+
+    merchant_id = row.get('merchant_id')
+    recommendation = str(row.get('product_recommendation', 'QRIS') or 'QRIS').upper()
+    if merchant_id in OBSERVED_MDR_PROFILE.index:
+        payment_mix = OBSERVED_MDR_PROFILE.loc[merchant_id]
+        effective_yield = float(payment_mix['qris_yield'])
+        if 'EDC' in recommendation:
+            effective_yield += float(payment_mix['edc_yield'])
+        return monthly_omzet * effective_yield
+
+    # Fallback hanya dipakai jika merchant belum memiliki observasi C2M.
+    scale = row.get('skala_usaha') or _infer_skala_usaha(monthly_omzet)
+    qris_rate = 0.0009 if scale == 'UMI' else 0.007
+    qris_share = 0.65 if scale == 'UMI' else 0.45
+    effective_yield = qris_share * qris_rate
+    if 'EDC' in recommendation:
+        blended_edc_rate = (
+            0.28 * EDC_MDR_RATES['debit_on_us']
+            + 0.44 * EDC_MDR_RATES['debit_off_us']
+            + 0.28 * EDC_MDR_RATES['credit_card']
+        )
+        effective_yield += 0.35 * blended_edc_rate
+    return monthly_omzet * effective_yield
 
 
 def fee_display_text(row, prefix="Est. MDR: "):
@@ -170,7 +280,7 @@ def fee_display_text(row, prefix="Est. MDR: "):
 
 
 def filter_non_bni_targets(kategori=None, kota=None):
-    df = merchants_display[merchants_display['is_nasabah_bni'] == 'Tidak'].copy()
+    df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
     if kategori and kategori != 'Semua':
         df = df[df['kategori'] == kategori]
     if kota and kota != 'Semua':
@@ -231,15 +341,15 @@ def compute_ecosystem_summary(min_size=3, exclude_unassigned=True):
             customer_union.update(merchant_customers.get(merchant_id, set()))
         return pd.Series({
             'size': len(g),
-            'bni_count': (g['is_nasabah_bni'] == 'Ya').sum(),
-            'non_bni_count': (g['is_nasabah_bni'] == 'Tidak').sum(),
-            'bni_pct': (g['is_nasabah_bni'] == 'Ya').mean() * 100,
+            'bni_count': (g['is_bni_acquiring'] == 'Ya').sum(),
+            'non_bni_count': (g['is_bni_acquiring'] == 'Tidak').sum(),
+            'bni_pct': (g['is_bni_acquiring'] == 'Ya').mean() * 100,
             'dominant_cat': g['kategori'].mode().iloc[0] if len(g['kategori'].mode()) > 0 else 'Mixed',
             'dominant_city': g['kota'].mode().iloc[0] if len(g['kota'].mode()) > 0 else 'Mixed',
             'avg_connections': g['degree'].mean(),
             'unique_customers': len(customer_union),
             'total_monthly_omzet': g['avg_omzet_bulanan'].sum(),
-            'potential_fee': g.loc[g['is_nasabah_bni'] == 'Tidak'].apply(get_est_fee, axis=1).sum(),
+            'potential_fee': g.loc[g['is_bni_acquiring'] == 'Tidak'].apply(get_est_fee, axis=1).sum(),
         })
 
     per_community = df.groupby('community_id').apply(
@@ -378,7 +488,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
             continue
 
         row = m_info.iloc[0]
-        is_bni = row['is_nasabah_bni']  # string "Ya"/"Tidak"
+        is_bni = row['is_bni_acquiring']  # string "Ya"/"Tidak"
         predicted_priority = row.get('predicted_priority', 0)
         pr = row.get('pagerank', 0)
         comm = row.get('community_id', -1)
@@ -389,7 +499,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600):
         pr_values.append(pr)
         node_prs.append((node, pr, row.get('nama', '')))
 
-        # Color logic — baca is_nasabah_bni sebagai string, BUKAN angka encoded
+        # Color logic — baca is_bni_acquiring sebagai string, BUKAN angka encoded
         if is_bni == 'Ya':
             node_color.append(THEME['bni'])
         elif predicted_priority == 1:
@@ -534,7 +644,7 @@ def build_graph_legend():
 # ============================================================
 def build_kategori_composition_figure():
     df = merchants_display.copy()
-    df['Status BNI'] = df['is_nasabah_bni'].map({'Ya': 'Sudah Nasabah', 'Tidak': 'Belum Nasabah'})
+    df['Status BNI'] = df['is_bni_acquiring'].map({'Ya': 'Sudah Nasabah', 'Tidak': 'Belum Nasabah'})
     chart_data = df.groupby(['kategori', 'Status BNI']).size().reset_index(name='count')
 
     opp_order = (chart_data[chart_data['Status BNI'] == 'Belum Nasabah']
@@ -587,7 +697,7 @@ def build_scatter_figure():
     df['bni_connections'] = (df['degree'] * df['connected_bni_ratio']).round().astype(int)
     df['est_fee'] = df.apply(get_est_fee, axis=1)
     df['size_plot'] = df['est_fee'].clip(lower=max(df['est_fee'].max() * 0.02, 1))
-    df['Status BNI'] = df['is_nasabah_bni'].map({'Ya': 'Sudah Nasabah', 'Tidak': 'Belum Nasabah'})
+    df['Status BNI'] = df['is_bni_acquiring'].map({'Ya': 'Sudah Nasabah', 'Tidak': 'Belum Nasabah'})
 
     fig = px.scatter(
         df, x='degree', y='bni_connections', size='size_plot', color='Status BNI',
@@ -613,7 +723,7 @@ def build_scatter_figure():
 
 def build_fee_per_kota_figure():
     """Potensi MDR per kota berdasarkan omzet bulanan merchant non-BNI."""
-    df = merchants_display[merchants_display['is_nasabah_bni'] == 'Tidak'].copy()
+    df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
     df['est_fee'] = df.apply(get_est_fee, axis=1)
     grouped = df.groupby('kota')['est_fee'].sum().reset_index().sort_values('est_fee', ascending=False)
 
@@ -735,7 +845,7 @@ def run_agent_simple(user_message):
 
         # Tool functions membaca tabel readable dan graph affinity undirected.
         def _get_top_acquisition_targets(n=5, kategori=None, kota=None):
-            df = merchants_display[merchants_display['is_nasabah_bni'] == 'Tidak'].copy()
+            df = merchants_display[merchants_display['is_bni_acquiring'] == 'Tidak'].copy()
             if kategori: df = df[df['kategori'].str.lower() == kategori.lower()]
             if kota: df = df[df['kota'].str.lower() == kota.lower()]
             if len(df) == 0: return json.dumps({"error": "Tidak ada data"})
@@ -765,7 +875,7 @@ def run_agent_simple(user_message):
             if len(info) == 0: return json.dumps({"error": "Not found"})
             row = info.iloc[0]
             monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
-            fee = monthly_omzet * 0.007
+            fee = get_est_fee(row)
             return json.dumps({
                 "merchant_id": merchant_id,
                 "monthly_omzet": monthly_omzet,
@@ -778,7 +888,7 @@ def run_agent_simple(user_message):
             }, ensure_ascii=False, default=str)
 
         def _get_overview_stats():
-            total = len(merchants_display); bni = (merchants_display['is_nasabah_bni'] == 'Ya').sum()
+            total = len(merchants_display); bni = (merchants_display['is_bni_acquiring'] == 'Ya').sum()
             return json.dumps({"total": total, "bni": int(bni), "non_bni": int(total - bni),
                 "penetration": round(bni / total * 100, 1),
                 "merchant_dalam_affinity_graph": GRAPH_COVERAGE,
@@ -903,12 +1013,13 @@ app.index_string = '''<!DOCTYPE html>
 # PRECOMPUTE KPI VALUES
 # ============================================================
 total_merchants = len(merchants_display)
-bni_count = (merchants_display['is_nasabah_bni'] == 'Ya').sum()
+bni_count = (merchants_display['is_bni_acquiring'] == 'Ya').sum()
 non_bni_count = total_merchants - bni_count
 penetration = round(bni_count / total_merchants * 100, 1) if total_merchants else 0
 high_priority = (merchants_display['predicted_priority'] == 1).sum()
 
-# Potensi MDR bulanan: omzet bulanan merchant prioritas tinggi × asumsi MDR 0,7%.
+# Potensi MDR bulanan: omzet merchant prioritas tinggi × effective MDR yield
+# sesuai rekomendasi produk, skala QRIS, dan mix instrumen EDC.
 top_priority_df = merchants_display[merchants_display['predicted_priority'] == 1]
 potential_fee_income = top_priority_df.apply(get_est_fee, axis=1).sum() if len(top_priority_df) else 0
 
@@ -1335,7 +1446,7 @@ def update_target_table(kategori, kota, limit):
     if kota and kota != 'Semua':
         filtered_all = filtered_all[filtered_all['kota'] == kota]
     n_filtered = len(filtered_all)
-    n_target = len(filtered_all[filtered_all['is_nasabah_bni'] == 'Tidak'])
+    n_target = len(filtered_all[filtered_all['is_bni_acquiring'] == 'Tidak'])
     filtered_priority_df = filtered_all[filtered_all['predicted_priority'] == 1]
     filtered_fee = filtered_priority_df.apply(get_est_fee, axis=1).sum() if len(filtered_priority_df) else 0
 
@@ -1445,7 +1556,7 @@ def on_node_click(clickData):
 
     detail_children = [
         html.H6(f"Detail: {row.get('nama', merchant_id)}", className="mb-1"),
-        html.Small(f"{row.get('kategori','-')} · {row.get('kota','-')} · Status BNI: {row.get('is_nasabah_bni','-')}",
+        html.Small(f"{row.get('kategori','-')} · {row.get('kota','-')} · Status BNI: {row.get('is_bni_acquiring','-')}",
                    className="text-muted d-block"),
         html.Small(f"{degree} merchant dengan pelanggan serupa ({bni_partners} sudah BNI)", className="d-block mt-1"),
         html.Small(f"{int(row.get('n_customers', 0))} pelanggan unik di merchant ini · "
@@ -1570,7 +1681,7 @@ def update_ecosystem_detail(community_id):
 
     mini_fig = build_network_figure(view=community_ids, height=380)
 
-    non_bni_members = members_df[members_df['is_nasabah_bni'] == 'Tidak']
+    non_bni_members = members_df[members_df['is_bni_acquiring'] == 'Tidak']
     hub_candidates = non_bni_members.nlargest(3, 'degree')
 
     narrative_parts = [
@@ -1632,7 +1743,7 @@ def update_ecosystem_member_table(community_id, limit):
     ]))
     table_rows = []
     for _, row in members_sorted.iterrows():
-        bni_val = row.get('is_nasabah_bni', 'Tidak')
+        bni_val = row.get('is_bni_acquiring', 'Tidak')
         inf_label, inf_color = influence_badge(row.get('pagerank', 0))
         table_rows.append(html.Tr([
             html.Td(str(row.get('nama', '-'))[:32]),
