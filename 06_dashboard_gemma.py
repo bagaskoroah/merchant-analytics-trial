@@ -143,9 +143,8 @@ else:
 # EDC memakai asumsi bisnis eksplisit per instrumen pembayaran. Debit GPN on-us
 # dan off-us mengikuti skema 0,15% dan 1%; kartu kredit memakai asumsi 2%.
 EDC_MDR_RATES = {
-    'debit_on_us': 0.0015,
-    'debit_off_us': 0.0100,
-    'credit_card': 0.0200,
+    'debit': 0.0015,
+    'credit_card': 0.02*0.85,
 }
 
 
@@ -170,8 +169,8 @@ def _build_observed_mdr_profile():
     trx['skala_usaha'] = trx['target_id'].map(scale_map).fillna('UKE')
     qris_rate = np.where(
         trx['skala_usaha'].eq('UMI'),
-        np.where(trx['amount'].le(500_000), 0.0, 0.003),
-        0.007,
+        np.where(trx['amount'].le(500_000), 0.0, 0.003*0.85),
+        0.007*0.85,
     )
     trx['qris_fee'] = np.where(trx['channel'].eq('QRIS'), trx['amount'] * qris_rate, 0.0)
     trx['edc_fee'] = np.where(
@@ -259,20 +258,19 @@ def get_est_fee(row):
 
     # Fallback hanya dipakai jika merchant belum memiliki observasi C2M.
     scale = row.get('skala_usaha') or _infer_skala_usaha(monthly_omzet)
-    qris_rate = 0.0009 if scale == 'UMI' else 0.007
+    qris_rate = 0.0009 if scale == 'UMI' else 0.006
     qris_share = 0.65 if scale == 'UMI' else 0.45
     effective_yield = qris_share * qris_rate
     if 'EDC' in recommendation:
         blended_edc_rate = (
-            0.28 * EDC_MDR_RATES['debit_on_us']
-            + 0.44 * EDC_MDR_RATES['debit_off_us']
+            0.72 * EDC_MDR_RATES['debit']
             + 0.28 * EDC_MDR_RATES['credit_card']
         )
         effective_yield += 0.35 * blended_edc_rate
     return monthly_omzet * effective_yield
 
 
-def fee_display_text(row, prefix="Est. MDR: "):
+def fee_display_text(row, prefix="Est. FBI: "):
     monthly_omzet = float(row.get('avg_omzet_bulanan', 0) or 0)
     if monthly_omzet <= 0:
         return "Belum ada data omzet"
@@ -1107,7 +1105,7 @@ def quick_summary_panel(n_filtered, n_target, n_priority, fee):
         dbc.Col(mini_stat("Merchant Tercakup", f"{n_filtered}"), width=6),
         dbc.Col(mini_stat("Target Akuisisi", f"{n_target}", "text-danger"), width=6),
         dbc.Col(mini_stat("Prioritas Tinggi", f"{n_priority}", "text-warning"), width=6),
-        dbc.Col(mini_stat("Estimasi MDR", format_rupiah_short(fee), "text-primary"), width=6),
+        dbc.Col(mini_stat("Estimasi FBI", format_rupiah_short(fee), "text-primary"), width=6),
     ], className="quick-summary-grid")
 
 
@@ -1132,7 +1130,7 @@ def overview_layout():
                               subtext="peluang akuisisi"), width=6, md=4, lg=2),
             dbc.Col(kpi_card("Prioritas Tinggi", f"{high_priority}", value_color="text-warning",
                               subtext="siap digarap"), width=6, md=4, lg=2),
-            dbc.Col(kpi_card("Potensi MDR", format_rupiah_short(potential_fee_income),
+            dbc.Col(kpi_card("Potensi FBI", format_rupiah_short(potential_fee_income),
                               value_color="text-primary", subtext="estimasi dari volume transaksi merchant"), width=6, md=4, lg=2),
             dbc.Col(kpi_card("Ekosistem Teridentifikasi", f"{n_communities}", value_color="text-primary",
                               subtext="klik untuk detail →", link_href="/ekosistem"), width=6, md=4, lg=2),
@@ -1344,7 +1342,7 @@ def analytics_layout():
             ], width=12, lg=6, className="mb-3"),
             dbc.Col([
                 dbc.Card([
-                    dbc.CardHeader(html.H5("Potensi MDR per Kota", className="mb-0")),
+                    dbc.CardHeader(html.H5("Potensi FBI per Kota", className="mb-0")),
                     dbc.CardBody([dcc.Graph(figure=build_fee_per_kota_figure(), config=GRAPH_CONFIG)])
                 ], className="shadow-sm border-0 h-100", style={"borderRadius": "12px"})
             ], width=12, lg=6, className="mb-3"),
@@ -1675,7 +1673,7 @@ def update_ecosystem_detail(community_id):
                           subtext="pelanggan unik ekosistem"), xs=6, md=4, lg=2),
         dbc.Col(kpi_card("Omzet Bulanan", format_rupiah_short(total_monthly_omzet), value_color="text-primary",
                           subtext="estimasi seluruh merchant"), xs=6, md=4, lg=2),
-        dbc.Col(kpi_card("Potensi MDR Tambahan", format_rupiah_short(potential_fee), value_color="text-warning",
+        dbc.Col(kpi_card("Potensi FBI Tambahan", format_rupiah_short(potential_fee), value_color="text-warning",
                           subtext="jika non-BNI diakuisisi/bln"), xs=6, md=4, lg=2),
     ], className="g-3")
 
@@ -1699,7 +1697,7 @@ def update_ecosystem_detail(community_id):
 
     if potential_fee > 0:
         narrative_parts.append(
-            f"Estimasi potensi MDR tambahan: {format_rupiah_short(potential_fee)}/bulan "
+            f"Estimasi potensi FBI tambahan: {format_rupiah_short(potential_fee)}/bulan "
             f"jika seluruh merchant non-BNI di ekosistem ini diakuisisi."
         )
 
@@ -1739,7 +1737,7 @@ def update_ecosystem_member_table(community_id, limit):
 
     table_header = html.Thead(html.Tr([
         html.Th("Nama"), html.Th("Kesamaan Pelanggan"), html.Th("Status BNI"),
-        html.Th("Tingkat Pengaruh"), html.Th("Estimasi MDR/Bulan")
+        html.Th("Tingkat Pengaruh"), html.Th("Estimasi FBI/Bulan")
     ]))
     table_rows = []
     for _, row in members_sorted.iterrows():
