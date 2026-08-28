@@ -108,8 +108,10 @@ HAS_LOGO = os.path.exists(LOGO_PATH)
 # ============================================================
 # NORMALIZE DISPLAY TABLE
 # ============================================================
-merchants_display['predicted_priority'] = merchants_display['predicted_priority'].fillna(0).astype(int)
-merchants_display['priority_probability'] = merchants_display['priority_probability'].fillna(0)
+merchants_display['priority_score'] = merchants_display['priority_score'].fillna(0)
+merchants_display['priority_category'] = merchants_display[
+    'priority_category'
+].fillna('Tidak Teranalisis')
 for col in ['degree', 'weighted_degree', 'pagerank', 'betweenness', 'community_size',
             'connected_bni_ratio', 'avg_neighbor_jaccard', 'n_customers',
             'product_rec_proba_edc', 'avg_omzet_bulanan', 'community_id']:
@@ -230,10 +232,8 @@ for col in _econ_cols:
 PR_Q75 = merchants_display['pagerank'].quantile(0.75)
 PR_Q40 = merchants_display['pagerank'].quantile(0.40)
 GRAPH_COVERAGE = int((merchants_display['degree'] > 0).sum())
-PRODUCT_MODEL_AUC = float(
-    product_model_metadata.get('test_metrics', {}).get('roc_auc',
-    product_model_metadata.get('test_metrics', {}).get('auc_roc', 0))
-)
+product_test_metrics = product_model_metadata.get('test_metrics', {})
+PRODUCT_MODEL_AUC = float(product_test_metrics['roc_auc'])
 PRODUCT_MODEL_EXPERIMENTAL = PRODUCT_MODEL_AUC < 0.65
 
 # ============================================================
@@ -253,12 +253,14 @@ def format_rupiah_short(value):
     return f"{sign}Rp {value:.0f}"
 
 
-def priority_badge(score):
-    if score >= 0.7:
-        return ("Prioritas Tinggi", "danger")
-    elif score >= 0.4:
-        return ("Prioritas Sedang", "warning")
-    return ("Prioritas Rendah", "secondary")
+def priority_badge(category):
+    color_map = {
+        'Tinggi': 'danger',
+        'Sedang': 'warning',
+        'Rendah': 'secondary',
+        'Tidak Teranalisis': 'light',
+    }
+    return (f"Prioritas: {category}", color_map.get(category, 'secondary'))
 
 
 def influence_badge(pr_value):
@@ -278,6 +280,14 @@ def get_produk_rekomendasi(row):
     proba_edc = float(row.get('product_rec_proba_edc', 0.5) or 0.5)
     confidence = proba_edc if recommendation == 'QRIS + EDC' else 1 - proba_edc
     return f"{recommendation} ({confidence:.0%})"
+
+
+def get_produk_saat_ini(row):
+    """Observed current product untuk merchant existing BNI."""
+    if row.get('is_bni_acquiring') != 'Ya':
+        return '-'
+    product = str(row.get('produk_bni', '') or '').strip()
+    return product if product in ('QRIS', 'QRIS + EDC') else '-'
 
 
 def get_merchant_economics(row):
@@ -345,7 +355,7 @@ def filter_non_bni_targets(kategori=None, kota=None):
         df = df[df['kategori'] == kategori]
     if kota and kota != 'Semua':
         df = df[df['kota'] == kota]
-    return df.sort_values('priority_probability', ascending=False)
+    return df.sort_values('priority_score', ascending=False)
 
 
 def legend_dot(color):
@@ -592,7 +602,8 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600,
 
         row = m_info.iloc[0]
         is_bni = row['is_bni_acquiring']  # string "Ya"/"Tidak"
-        predicted_priority = row.get('predicted_priority', 0)
+        priority_category = row.get('priority_category', 'Tidak Teranalisis')
+        priority_score = float(row.get('priority_score', 0) or 0)
         pr = row.get('pagerank', 0)
         comm = row.get('community_id', -1)
 
@@ -605,7 +616,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600,
         # Color logic — baca is_bni_acquiring sebagai string, BUKAN angka encoded
         if is_bni == 'Ya':
             node_color.append(THEME['bni'])
-        elif predicted_priority == 1:
+        elif priority_category == 'Tinggi':
             node_color.append(THEME['priority'])
         else:
             node_color.append(THEME['target'])
@@ -614,10 +625,14 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600,
         nama = row.get('nama', 'Unknown')
         degree = int(row.get('degree', 0))
         bni_ratio = row.get('connected_bni_ratio', 0)
-        product_hover = (
-            f"Rekomendasi produk: {get_produk_rekomendasi(row)}<br>"
-            if is_bni == 'Tidak' else ''
-        )
+        if is_bni == 'Ya':
+            business_hover = f"Produk saat ini: {get_produk_saat_ini(row)}<br>"
+        else:
+            business_hover = (
+                f"Prioritas: {priority_category}<br>"
+                f"Skor Prioritas: {priority_score * 100:.0f}/100<br>"
+                f"Rekomendasi produk: {get_produk_rekomendasi(row)}<br>"
+            )
         hover = (
             f"<b>{nama}</b><br>"
             f"ID: {node}<br>"
@@ -628,7 +643,7 @@ def build_network_figure(view='all', kategori=None, kota=None, height=600,
             f"Merchant dengan pelanggan serupa: {degree} ({bni_ratio:.0%} sudah BNI)<br>"
             f"Jumlah pelanggan: {int(row.get('n_customers', 0))}<br>"
             f"Rata-rata kesamaan pelanggan: {row.get('avg_neighbor_jaccard', 0):.1%}<br>"
-            f"{product_hover}"
+            f"{business_hover}"
             f"Ekosistem bisnis: {get_ecosystem_label(int(comm)) if comm != -1 else 'Belum terklasifikasi'}"
             + economic_hover_text(row)
         )
@@ -1030,10 +1045,10 @@ def run_agent_simple(user_message):
             if kategori: df = df[df['kategori'].str.lower() == kategori.lower()]
             if kota: df = df[df['kota'].str.lower() == kota.lower()]
             if len(df) == 0: return json.dumps({"error": "Tidak ada data"})
-            top = df.nlargest(n, 'priority_probability').copy()
+            top = df.nlargest(n, 'priority_score').copy()
             top['rekomendasi_produk'] = top.apply(get_produk_rekomendasi, axis=1)
             return json.dumps({"targets": top[['merchant_id', 'nama', 'kategori', 'kota',
-                'priority_probability', 'pagerank', 'degree', 'connected_bni_ratio',
+                'priority_score', 'priority_category', 'pagerank', 'degree', 'connected_bni_ratio',
                 'n_customers', 'avg_neighbor_jaccard', 'rekomendasi_produk']].to_dict('records')},
                 ensure_ascii=False, default=str)
 
@@ -1204,15 +1219,17 @@ total_merchants = len(merchants_display)
 bni_count = (merchants_display['is_bni_acquiring'] == 'Ya').sum()
 non_bni_count = total_merchants - bni_count
 penetration = round(bni_count / total_merchants * 100, 1) if total_merchants else 0
-high_priority = (merchants_display['predicted_priority'] == 1).sum()
+acquisition_targets = merchants_display[
+    merchants_display['is_bni_acquiring'].eq('Tidak')
+]
+high_priority = acquisition_targets['priority_category'].eq('Tinggi').sum()
 
 # Potensi MDR bulanan: omzet merchant prioritas tinggi × effective MDR yield
 # sesuai rekomendasi produk, skala QRIS, dan mix instrumen EDC.
-top_priority_df = merchants_display[merchants_display['predicted_priority'] == 1]
 edc_target_count = ((merchants_display['is_bni_acquiring'] == 'Tidak') & (merchants_display['product_recommendation'] == 'QRIS + EDC')).sum()
 
-model_f1 = product_model_metadata.get('test_metrics', {}).get('f1', 0)
-model_auc = product_model_metadata.get('test_metrics', {}).get('auc_roc', 0)
+model_f1 = float(product_test_metrics['macro_f1'])
+model_auc = float(product_test_metrics['roc_auc'])
 
 
 # ============================================================
@@ -1263,7 +1280,7 @@ def build_header():
 
 def build_footer():
     """Info model teknis — hanya muncul di halaman Analytics, disembunyikan di balik
-    expander supaya F1-Score/AUC tidak langsung tampil di halaman utama untuk tim non-teknis."""
+    expander supaya Macro-F1/ROC-AUC tidak langsung tampil di halaman utama."""
     return html.Div([
         html.Hr(),
         html.Details([
@@ -1272,7 +1289,7 @@ def build_footer():
             html.Small(
                 f"Acquisition priority: Composite Score (PageRank + BNI Ratio + Degree + Weighted Degree), bukan ML classifier · "
                 f"Model rekomendasi produk: {product_model_metadata.get('model_name', '-')} · "
-                f"F1-Score: {model_f1:.3f} · AUC-ROC: {model_auc:.3f}",
+                f"Macro-F1: {model_f1:.3f} · ROC-AUC: {model_auc:.3f}",
                 className="text-muted d-block mt-1"
             )
         ])
@@ -1693,15 +1710,17 @@ def update_target_table(kategori, kota, limit):
         filtered_all = filtered_all[filtered_all['kota'] == kota]
     n_filtered = len(filtered_all)
     n_target = len(filtered_all[filtered_all['is_bni_acquiring'] == 'Tidak'])
-    filtered_priority_df = filtered_all[filtered_all['predicted_priority'] == 1]
     filtered_targets = filtered_all[filtered_all['is_bni_acquiring'] == 'Tidak']
+    filtered_priority_df = filtered_targets[
+        filtered_targets['priority_category'].eq('Tinggi')
+    ]
     filtered_edc = (filtered_targets['product_recommendation'] == 'QRIS + EDC').sum()
 
     summary_panel = quick_summary_panel(n_filtered, n_target, len(filtered_priority_df), filtered_edc)
 
     # Pesan kontekstual saat filter menghasilkan target lemah
-    n_high = (df_all_targets['priority_probability'] >= 0.7).sum()
-    n_medium = ((df_all_targets['priority_probability'] >= 0.4) & (df_all_targets['priority_probability'] < 0.7)).sum()
+    n_high = df_all_targets['priority_category'].eq('Tinggi').sum()
+    n_medium = df_all_targets['priority_category'].eq('Sedang').sum()
 
     context_msg, context_color = None, THEME['muted']
     if len(df_all_targets) == 0:
@@ -1724,23 +1743,25 @@ def update_target_table(kategori, kota, limit):
     high_med_rows = []
     low_rows = []
     for i, (_, row) in enumerate(top.iterrows()):
-        score = row.get('priority_probability', 0)
-        badge_label, badge_color = priority_badge(score)
+        score = float(row.get('priority_score', 0) or 0)
+        category = row.get('priority_category', 'Tidak Teranalisis')
+        badge_label, badge_color = priority_badge(category)
         degree = int(row.get('degree', 0))
         bni_ratio = row.get('connected_bni_ratio', 0)
         bni_partners = int(degree * bni_ratio)
         produk = get_produk_rekomendasi(row)
         nama = str(row.get('nama', 'Unknown'))[:28]
 
-        if score >= 0.4:
+        if category in ('Tinggi', 'Sedang'):
             # Prioritas Tinggi/Sedang — tampil menonjol lengkap dengan estimasi fee
             high_med_rows.append(
                 html.Div([
                     html.Div([
                         html.Strong(f"#{i+1} ", className="text-muted"),
                         html.Strong(nama),
-                        dbc.Badge(f"{badge_label} ({score*100:.0f}%)", color=badge_color, className="ms-2"),
+                        dbc.Badge(badge_label, color=badge_color, className="ms-2"),
                     ]),
+                    html.Small(f"Skor Prioritas: {score*100:.0f}/100", className="text-muted d-block"),
                     html.Small(f"{row.get('kategori','-')} · {row.get('kota','-')}",
                                className="text-muted d-block"),
                     html.Small(f"{degree} merchant dengan pelanggan serupa ({bni_partners} sudah BNI)",
@@ -1758,6 +1779,8 @@ def update_target_table(kategori, kota, limit):
                 html.Div([
                     html.Span(f"#{i+1} {nama} ", className="text-muted", style={"fontSize": "0.82rem"}),
                     dbc.Badge(badge_label, color=badge_color, className="ms-1", style={"fontSize": "0.65rem"}),
+                    html.Span(f" · Skor Prioritas: {score*100:.0f}/100",
+                              className="text-muted", style={"fontSize": "0.78rem"}),
                     html.Span(f" · {row.get('kategori','-')} · {row.get('kota','-')}",
                               className="text-muted", style={"fontSize": "0.78rem"}),
                 ], className="target-row target-row--low")
@@ -1765,7 +1788,7 @@ def update_target_table(kategori, kota, limit):
 
     children = list(high_med_rows)
     if low_rows:
-        children.append(html.Div("Prioritas Rendah", className="text-muted small fw-bold mt-2 mb-1"))
+        children.append(html.Div("Prioritas Rendah / Belum Teranalisis", className="text-muted small fw-bold mt-2 mb-1"))
         children.extend(low_rows)
 
     return children, context_el, summary_panel
@@ -1856,9 +1879,23 @@ def on_node_click(clickData, reset_clicks):
                    f"rata-rata kesamaan pelanggan {row.get('avg_neighbor_jaccard', 0):.1%}",
                    className="text-muted d-block"),
     ]
-    if row.get('is_bni_acquiring') == 'Tidak':
+    if row.get('is_bni_acquiring') == 'Ya':
+        detail_children.append(
+            html.Small(
+                f"Produk saat ini: {get_produk_saat_ini(row)}",
+                className="text-primary d-block"
+            )
+        )
+    else:
         e = get_merchant_economics(row)
+        priority_category = row.get('priority_category', 'Tidak Teranalisis')
+        priority_score = float(row.get('priority_score', 0) or 0)
         detail_children.extend([
+            html.Small(f"Prioritas: {priority_category}", className="text-warning d-block"),
+            html.Small(
+                f"Skor Prioritas: {priority_score * 100:.0f}/100",
+                className="text-muted d-block"
+            ),
             html.Small(
                 f"Rekomendasi produk: {get_produk_rekomendasi(row)}",
                 className="text-primary d-block"
@@ -2078,7 +2115,7 @@ def update_ecosystem_member_table(community_id, limit, status_filter):
     if len(members_df) == 0:
         return html.P("Tidak ada anggota yang sesuai filter.", className="text-muted")
 
-    members_sorted = members_df.sort_values('priority_probability', ascending=False)
+    members_sorted = members_df.sort_values('priority_score', ascending=False)
     if limit != -1:
         members_sorted = members_sorted.head(limit)
 
@@ -2109,7 +2146,7 @@ if __name__ == '__main__':
     print("Merchant Network Analytics Dashboard")
     print("="*60)
     print(f"Merchants: {total_merchants} | Nasabah BNI: {bni_count} ({penetration}%) | Ekosistem: {n_communities}")
-    print(f"Product rec model: {product_model_metadata.get('model_name', '-')} | F1: {model_f1:.3f} | AUC: {model_auc:.3f}")
+    print(f"Product rec model: {product_model_metadata.get('model_name', '-')} | Macro-F1: {model_f1:.3f} | ROC-AUC: {model_auc:.3f}")
     print(f"Acquisition priority: Composite Score (bukan ML classifier), bobot: {priority_weights}")
     print(f"\nBuka di browser: http://localhost:8050")
     print("="*60)
